@@ -1,0 +1,5 @@
+pyqt6
+bcrypt
+fpdf
+mysql-connector-python
+python-dotenv
