@@ -3,3 +3,9 @@
 2025-08-19 16:54:16,363 - INFO - User logged in: Collins73
 2025-08-19 17:09:28,061 - INFO - User created: Admin (admin)
 2025-08-19 17:09:36,924 - INFO - User logged in: Admin
+2025-08-19 17:22:46,590 - INFO - User logged in: Collins73
+2025-08-19 17:26:59,332 - INFO - User created: Kennedy (admin)
+2025-08-19 17:27:45,770 - INFO - User logged in: Kennedy
+2025-08-19 19:07:54,601 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-19 19:08:28,635 - ERROR - User creation failed: database is locked
+2025-08-19 19:09:39,992 - INFO - User logged in: Collins73

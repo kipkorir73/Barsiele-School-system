@@ -1,42 +1,127 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
-
-from .login import LoginWindow
+from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMenuBar, QStatusBar, QProgressBar
+from PyQt6.QtCore import Qt, QTimer
 from .student_tab import StudentTab
 from .payment_tab import PaymentTab
 from .report_tab import ReportTab
 from .user_tab import UserTab
+from .admin_dashboard import AdminDashboard
+from .settings_tab import SettingsTab
+import logging
+from datetime import datetime
+
+logging.basicConfig(filename='app/logs/main.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MainWindow(QMainWindow):
     def __init__(self, user):
         super().__init__()
         self.user = user
-        self.setWindowTitle("School Management System")
-        self.setGeometry(100, 100, 800, 600)
+        self.setWindowTitle(f"School Management System - {user.get('username', 'User')} ({user.get('role', 'Unknown').title()})")
+        self.setGeometry(100, 100, 1000, 700)
+        self.setMinimumSize(800, 600)
+        
+        # Styling
+        self.setStyleSheet("""
+            QMainWindow {
+                background-color: #ecf0f1;
+            }
+            QTabWidget::pane {
+                border: 1px solid #bdc3c7;
+                background-color: white;
+                border-radius: 5px;
+            }
+            QTabBar::tab {
+                background-color: #3498db;
+                color: white;
+                padding: 10px 15px;
+                margin-right: 2px;
+                border-radius: 5px;
+            }
+            QTabBar::tab:selected {
+                background-color: #2980b9;
+                border-bottom: 2px solid #2ecc71;
+            }
+            QStatusBar {
+                background-color: #2c3e50;
+                color: white;
+            }
+        """)
+        
+        self.create_menu_bar()
+        self.statusBar().showMessage(f"Welcome, {user.get('username')} | Role: {user.get('role', 'Unknown').title()}")
+        self.create_tabs()
+        
+        # Logout timer
+        self.logout_timer = QTimer(self)
+        self.logout_timer.timeout.connect(self.check_inactivity)
+        self.logout_timer.start(300000)  # 5 minutes
+        self.last_activity = datetime.now()
 
+    def create_menu_bar(self):
+        menubar = self.menuBar()
+        file_menu = menubar.addMenu('File')
+        logout_action = file_menu.addAction('Logout')
+        logout_action.triggered.connect(self.logout)
+        exit_action = file_menu.addAction('Exit')
+        exit_action.triggered.connect(self.close)
+        
+        help_menu = menubar.addMenu('Help')
+        about_action = help_menu.addAction('About')
+        about_action.triggered.connect(self.show_about)
+        help_action = help_menu.addAction('Help')
+        help_action.triggered.connect(self.show_help)
+
+    def create_tabs(self):
         tabs = QTabWidget()
-        tabs.addTab(StudentTab(self.user), "Students")
-        tabs.addTab(PaymentTab(self.user), "Payments")
-
+        tabs.addTab(StudentTab(self.user), "👥 Students")
+        tabs.addTab(PaymentTab(self.user), "💰 Payments")
         if self.user.get('role') == 'admin':
-            tabs.addTab(ReportTab(), "Reports")
-            tabs.addTab(UserTab(), "Users")
-
+            tabs.addTab(ReportTab(), "📊 Reports")
+            tabs.addTab(UserTab(), "👤 Users")
+            tabs.addTab(AdminDashboard(self.user), "🏠 Dashboard")
+            tabs.addTab(SettingsTab(), "⚙️ Settings")
         self.setCentralWidget(tabs)
 
-def main():
-    """Entry point for launching the desktop GUI."""
-    app = QApplication(sys.argv)
+    def logout(self):
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(self, 'Logout', 'Are you sure you want to logout?', 
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            self.close()
+            from .login import LoginWindow
+            self.login_window = LoginWindow()
+            self.login_window.show()
 
-    # Show login first
-    login = LoginWindow()
-    if login.exec():  # Should return QDialog.Accepted on success
-        user = login.get_user()  # Make sure LoginWindow implements this
-        window = MainWindow(user)
-        window.show()
-        sys.exit(app.exec())
-    else:
-        sys.exit(0)
+    def show_about(self):
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.about(self, "About School Management System",
+                         "School Management System v1.0\n\nA comprehensive solution for managing school fees,\n"
+                         "student records, and payment tracking.\n\nDeveloped with PyQt6 and MySQL.")
 
-if __name__ == "__main__":
-    main()
+    def show_help(self):
+        from PyQt6.QtWidgets import QMessageBox
+        QMessageBox.information(self, "Help",
+                              "Welcome to the School Management System!\n\n"
+                              "- Use the Students tab to add/edit students.\n"
+                              "- Record payments and print receipts in the Payments tab.\n"
+                              "- Admins can manage reports, users, and settings.\n"
+                              "- Contact support for assistance.")
+
+    def closeEvent(self, event):
+        from PyQt6.QtWidgets import QMessageBox
+        reply = QMessageBox.question(self, 'Exit Application', 'Are you sure you want to exit?', 
+                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        if reply == QMessageBox.StandardButton.Yes:
+            event.accept()
+        else:
+            event.ignore()
+
+    def check_inactivity(self):
+        if (datetime.now() - self.last_activity).total_seconds() > 300:
+            self.logout()
+        self.last_activity = datetime.now()
+
+    def event(self, event):
+        if event.type() in (event.MouseButtonPress, event.KeyPress):
+            self.last_activity = datetime.now()
+        return super().event(event)

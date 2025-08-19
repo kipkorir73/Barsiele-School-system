@@ -1,69 +1,64 @@
-import os
 import sqlite3
-from pathlib import Path
-from .config import DB_TYPE, SQLITE_PATH, MYSQL_HOST, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
+from dotenv import load_dotenv
+import os
+import logging
+
+load_dotenv()
 
 class DBManager:
-    def __init__(self):
-        self.db_type = DB_TYPE
-        self.conn = None
-        self.cursor = None
-        
-        try:
-            if self.db_type == 'sqlite':
-                # Ensure data directory exists
-                Path(SQLITE_PATH).parent.mkdir(parents=True, exist_ok=True)
-                self.conn = sqlite3.connect(SQLITE_PATH)
-            elif self.db_type == 'mysql':
-                import mysql.connector
-                self.conn = mysql.connector.connect(
-                    host=MYSQL_HOST,
-                    user=MYSQL_USER,
-                    password=MYSQL_PASSWORD,
-                    database=MYSQL_DB
-                )
-            
-            if self.conn:
-                self.cursor = self.conn.cursor()
-                
-        except Exception as e:
-            print(f"Database connection error: {e}")
-            raise
+    _instance = None
 
-    def execute(self, query, params=()):
-        if not self.cursor:
-            raise Exception("Database connection not established")
-        self.cursor.execute(query, params)
-        self.conn.commit()
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(DBManager, cls).__new__(cls)
+            db_type = os.getenv('DB_TYPE', 'mysql')
+            if db_type == 'sqlite':
+                db_path = os.getenv('SQLITE_PATH', 'data/school_fees.db')
+                os.makedirs(os.path.dirname(db_path), exist_ok=True)
+                cls._instance.conn = sqlite3.connect(db_path)
+                cls._instance.conn.row_factory = sqlite3.Row
+            else:
+                raise ValueError("Only SQLite is supported with current configuration")
+            cls._instance.cursor = cls._instance.conn.cursor()
+        return cls._instance
 
-    def fetch_one(self, query, params=()):
-        if not self.cursor:
-            raise Exception("Database connection not established")
-        self.cursor.execute(query, params)
-        return self.cursor.fetchone()
-
-    def fetch_all(self, query, params=()):
-        if not self.cursor:
-            raise Exception("Database connection not established")
-        self.cursor.execute(query, params)
-        return self.cursor.fetchall()
-
-    def last_id(self):
-        if not self.cursor:
-            raise Exception("Database connection not established")
-        return self.cursor.lastrowid
-    
-    def close(self):
-        """Close database connection"""
-        if self.cursor:
-            self.cursor.close()
-            self.cursor = None
-        if self.conn:
-            self.conn.close()
-            self.conn = None
-    
     def __enter__(self):
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self.close()
+        if exc_type is not None:
+            logging.error(f"Database error: {exc_val}")
+        self.conn.commit()
+        self.cursor.close()
+        self.conn.close()
+        self._instance = None
+
+    def execute(self, query, params=None):
+        try:
+            self.cursor.execute(query, params or ())
+        except Exception as e:
+            logging.error(f"Query execution failed: {query} - {str(e)}")
+            raise
+
+    def fetch_one(self, query, params=None):
+        try:
+            self.cursor.execute(query, params or ())
+            return self.cursor.fetchone()
+        except Exception as e:
+            logging.error(f"Fetch one failed: {query} - {str(e)}")
+            raise
+
+    def fetch_all(self, query, params=None):
+        try:
+            self.cursor.execute(query, params or ())
+            return self.cursor.fetchall()
+        except Exception as e:
+            logging.error(f"Fetch all failed: {query} - {str(e)}")
+            raise
+
+# Ensure log directory exists
+log_path = os.getenv('LOG_PATH', 'logs/school_fees.log')
+log_dir = os.path.dirname(log_path)
+if log_dir and not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+logging.basicConfig(filename=log_path, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

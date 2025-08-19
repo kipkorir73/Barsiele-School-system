@@ -10,13 +10,16 @@ class TestPayment(unittest.TestCase):
         self.db.execute("DELETE FROM payments")
         self.db.execute("DELETE FROM fees")
         self.db.execute("DELETE FROM students")
-        self.student_id = create_student("ADM001", "Test Student", "Class 1", "guardian@example.com")
+        self.student_id = create_student("ADM001", "Test Student", 1, "guardian@example.com")
         set_fee(self.student_id, 1000.0)
 
     def test_balance(self):
-        record_payment(self.student_id, 500.0, "cash", "2025-08-15", 1)
+        _, receipt_no = record_payment(self.student_id, 500.0, "cash", "2025-08-15", 1)
         balance = get_balance(self.student_id)
         self.assertEqual(balance, 500.0)
+
+    def tearDown(self):
+        self.db.close()
 
 if __name__ == "__main__":
     unittest.main()

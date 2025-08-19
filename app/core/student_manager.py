@@ -1,52 +1,71 @@
 from .db_manager import DBManager
+import logging
 
-def create_student(admission_number, name, class_, guardian_contact, profile_picture=None):
-    db = DBManager()
-    try:
-        db.execute(
-            "INSERT INTO students (admission_number, name, class, guardian_contact, profile_picture) VALUES (?, ?, ?, ?, ?)",
-            (admission_number, name, class_, guardian_contact, profile_picture)
-        )
-        return db.last_id()
-    finally:
-        db.close()
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def create_student(admission_number, name, class_id, guardian_contact, profile_picture=None, bus_location=None):
+    with DBManager() as db:
+        try:
+            db.execute(
+                "INSERT INTO students (admission_number, class_id, name, guardian_contact, profile_picture, bus_location) "
+                "VALUES (%s, %s, %s, %s, %s, %s)",
+                (admission_number, class_id, name, guardian_contact, profile_picture, bus_location)
+            )
+            logging.info(f"Created student: {name} (ID: {db.last_id()})")
+            return db.last_id()
+        except Exception as e:
+            logging.error(f"Error creating student {name}: {e}")
+            raise
 
 def update_student(student_id, **kwargs):
     if not kwargs:
         return
-    
-    db = DBManager()
-    try:
-        set_clause = ', '.join(f"{k} = ?" for k in kwargs)
-        params = list(kwargs.values()) + [student_id]
-        db.execute(f"UPDATE students SET {set_clause} WHERE id = ?", params)
-    finally:
-        db.close()
+    with DBManager() as db:
+        try:
+            set_clause = ', '.join(f"{k} = %s" for k in kwargs)
+            params = list(kwargs.values()) + [student_id]
+            db.execute(f"UPDATE students SET {set_clause} WHERE id = %s", params)
+            logging.info(f"Updated student {student_id}")
+        except Exception as e:
+            logging.error(f"Error updating student {student_id}: {e}")
+            raise
 
 def get_student(student_id):
-    db = DBManager()
-    try:
-        return db.fetch_one("SELECT * FROM students WHERE id = ?", (student_id,))
-    finally:
-        db.close()
+    with DBManager() as db:
+        try:
+            return db.fetch_one("SELECT * FROM students WHERE id = %s", (student_id,))
+        except Exception as e:
+            logging.error(f"Error fetching student {student_id}: {e}")
+            raise
 
 def get_all_students():
-    db = DBManager()
-    try:
-        return db.fetch_all("SELECT * FROM students ORDER BY name")
-    finally:
-        db.close()
+    with DBManager() as db:
+        try:
+            return db.fetch_all("SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id ORDER BY c.name, s.name")
+        except Exception as e:
+            logging.error(f"Error fetching all students: {e}")
+            raise
 
 def search_students(query):
     if not query.strip():
         return get_all_students()
-    
-    db = DBManager()
-    try:
-        search_pattern = f"%{query}%"
-        return db.fetch_all(
-            "SELECT * FROM students WHERE name LIKE ? OR admission_number LIKE ? ORDER BY name", 
-            (search_pattern, search_pattern)
-        )
-    finally:
-        db.close()
+    with DBManager() as db:
+        try:
+            search_pattern = f"%{query}%"
+            return db.fetch_all(
+                "SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id "
+                "WHERE s.name LIKE %s OR s.admission_number LIKE %s ORDER BY c.name, s.name",
+                (search_pattern, search_pattern)
+            )
+        except Exception as e:
+            logging.error(f"Error searching students for query '{query}': {e}")
+            raise
+
+def get_highest_admission_number():
+    with DBManager() as db:
+        try:
+            result = db.fetch_one("SELECT MAX(admission_number) FROM students")
+            return result[0] or "ADM000"
+        except Exception as e:
+            logging.error(f"Error fetching highest admission number: {e}")
+            raise

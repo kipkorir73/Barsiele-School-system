@@ -1,21 +1,26 @@
-import bcrypt
-from .db_manager import DBManager
+from passlib.hash import bcrypt
+from ..core.db_manager import DBManager
 
-def hash_password(pw):
-    return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt())
+class Auth:
+    @staticmethod
+    def hash_password(password):
+        return bcrypt.hash(password)
 
-def check_password(hashed, pw):
-    return bcrypt.checkpw(pw.encode('utf-8'), hashed)
+    @staticmethod
+    def verify_password(password, hashed):
+        return bcrypt.verify(password, hashed)
 
-def create_user(username, pw, role):
-    db = DBManager()
-    hashed = hash_password(pw)
-    db.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed, role))
-    return db.last_id()
+    @staticmethod
+    def create_user(username, password, role):
+        hashed_password = Auth.hash_password(password)
+        with DBManager() as db:
+            db.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
+                      (username, hashed_password, role))
 
-def validate_login(username, pw):
-    db = DBManager()
-    user = db.fetch_one("SELECT id, password, role FROM users WHERE username = ?", (username,))
-    if user and check_password(user[1], pw):
-        return {'id': user[0], 'role': user[2]}
-    return None
+    @staticmethod
+    def authenticate(username, password):
+        with DBManager() as db:
+            user = db.fetch_one("SELECT * FROM users WHERE username = ?", (username,))
+            if user and Auth.verify_password(password, user['password']):
+                return dict(user)
+            return None

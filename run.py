@@ -6,17 +6,16 @@ Run this file to start the application
 import sys
 from pathlib import Path
 
-# Add the project root to Python path
 project_root = Path(__file__).parent
 sys.path.insert(0, str(project_root))
 
 def check_dependencies():
-    """Check if required dependencies are installed"""
     try:
         import PyQt6
-        import bcrypt
+        import passlib
         import fpdf
         from dotenv import load_dotenv
+        load_dotenv()
         return True
     except ImportError as e:
         print(f"Missing dependency: {e}")
@@ -24,29 +23,18 @@ def check_dependencies():
         return False
 
 def ensure_directories():
-    """Create required directories if they don't exist"""
-    directories = [
-        'app/data',
-        'app/logs', 
-        'app/receipts',
-        'app/backups',
-        'reports'
-    ]
-    
+    directories = ['app/data', 'app/logs', 'app/receipts', 'app/backups', 'reports']
     for dir_path in directories:
         Path(dir_path).mkdir(parents=True, exist_ok=True)
 
 def main():
-    """Main launcher"""
     print("=" * 50)
     print("    SCHOOL MANAGEMENT SYSTEM")
     print("=" * 50)
     
-    # Check dependencies
     if not check_dependencies():
         return
     
-    # Ensure directories exist
     ensure_directories()
     
     print("\nChoose how to run the application:")
@@ -59,7 +47,6 @@ def main():
     while True:
         try:
             choice = input("\nEnter your choice (1-5): ").strip()
-            
             if choice == '1':
                 launch_gui()
                 break
@@ -77,7 +64,6 @@ def main():
                 break
             else:
                 print("❌ Invalid choice! Please enter 1-5")
-                
         except KeyboardInterrupt:
             print("\n\nGoodbye! 👋")
             break
@@ -85,12 +71,19 @@ def main():
             print(f"❌ Error: {e}")
 
 def launch_gui():
-    """Launch desktop GUI application"""
     print("\n🚀 Starting Desktop Application...")
     try:
-        # ✅ Fixed import to point to main_window.py
-        from app.ui.desktop_frontend.main import main as gui_main
-        gui_main()
+        from PyQt6.QtWidgets import QApplication
+        from app.ui.desktop_frontend.login import LoginWindow
+        from app.core.initialize_db import init_db
+        init_db()
+        print("Database ready!")
+        app = QApplication(sys.argv)
+        app.setApplicationName("School Management System")
+        app.setApplicationVersion("1.0")
+        login_window = LoginWindow()
+        login_window.show()
+        sys.exit(app.exec())
     except ImportError as e:
         print(f"❌ GUI Error: {e}")
         print("Make sure PyQt6 is installed: pip install PyQt6")
@@ -98,7 +91,6 @@ def launch_gui():
         print(f"❌ Application Error: {e}")
 
 def launch_cli():
-    """Launch command line interface"""
     print("\n🚀 Starting Command Line Interface...")
     try:
         from app.core.main_app import main as cli_main
@@ -107,7 +99,6 @@ def launch_cli():
         print(f"❌ CLI Error: {e}")
 
 def initialize_database():
-    """Initialize the database"""
     print("\n🗄️ Initializing Database...")
     try:
         from app.core.initialize_db import init_db
@@ -117,7 +108,6 @@ def initialize_database():
         print(f"❌ Database initialization failed: {e}")
 
 def backup_database():
-    """Create database backup"""
     print("\n💾 Creating Database Backup...")
     try:
         from app.scripts.backup_db import backup

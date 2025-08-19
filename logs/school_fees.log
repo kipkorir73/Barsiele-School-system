@@ -1,0 +1,40 @@
+2025-08-19 23:28:22,929 - ERROR - Query execution failed: 
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(255) UNIQUE,
+        password TEXT,
+        role VARCHAR(50)
+    )
+     - near "AUTO_INCREMENT": syntax error
+2025-08-19 23:28:22,929 - ERROR - Database initialization error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:28:22,929 - ERROR - Database error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:30:26,740 - ERROR - Query execution failed: 
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(255) UNIQUE,
+        password TEXT,
+        role VARCHAR(50)
+    )
+     - near "AUTO_INCREMENT": syntax error
+2025-08-19 23:30:26,741 - ERROR - Database initialization error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:30:26,741 - ERROR - Database error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:31:07,265 - ERROR - Query execution failed: 
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(255) UNIQUE,
+        password TEXT,
+        role VARCHAR(50)
+    )
+     - near "AUTO_INCREMENT": syntax error
+2025-08-19 23:31:07,265 - ERROR - Database initialization error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:31:07,266 - ERROR - Database error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:35:11,563 - ERROR - Query execution failed: 
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTO_INCREMENT,
+        username VARCHAR(255) UNIQUE,
+        password TEXT,
+        role VARCHAR(50)
+    )
+     - near "AUTO_INCREMENT": syntax error
+2025-08-19 23:35:11,564 - ERROR - Database initialization error: near "AUTO_INCREMENT": syntax error
+2025-08-19 23:35:11,564 - ERROR - Database error: near "AUTO_INCREMENT": syntax error
