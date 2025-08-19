@@ -1,7 +1,13 @@
-import shutil, os
-from app.config import BACKUP_DIR, SQLITE_PATH
+import shutil
 from datetime import datetime
-os.makedirs(BACKUP_DIR, exist_ok=True)
-dest = os.path.join(BACKUP_DIR, f'school_fees_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.db')
-shutil.copy2(SQLITE_PATH, dest)
-print('Backup created:', dest)
+import os
+
+def backup():
+    if not os.path.exists('backups'):
+        os.makedirs('backups')
+    timestamp = datetime.now().strftime('%Y%m%d%H%M%S')
+    shutil.copy('data/school.db', f'backups/school_{timestamp}.db')
+    print("Backup created.")
+
+if __name__ == "__main__":
+    backup()

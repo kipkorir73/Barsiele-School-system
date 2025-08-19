@@ -1,42 +1,29 @@
-from app.db_manager import DatabaseManager
-import logging
+from db_manager import DBManager
 
-logger = logging.getLogger(__name__)
+def create_student(admission_number, name, class_, guardian_contact, profile_picture=None):
+    db = DBManager()
+    db.execute(
+        "INSERT INTO students (admission_number, name, class, guardian_contact, profile_picture) VALUES (?, ?, ?, ?, ?)",
+        (admission_number, name, class_, guardian_contact, profile_picture)
+    )
+    return db.last_id()
 
-class StudentManager:
-    def __init__(self, dbm=None):
-        self.dbm = dbm or DatabaseManager()
+def update_student(student_id, **kwargs):
+    if not kwargs:
+        return
+    set_clause = ', '.join(f"{k} = ?" for k in kwargs)
+    params = list(kwargs.values()) + [student_id]
+    db = DBManager()
+    db.execute(f"UPDATE students SET {set_clause} WHERE id = ?", params)
 
-    def add_student(self, admission_number, full_name, class_name, stream=None):
-        conn = self.dbm.connect()
-        cur = conn.cursor()
-        try:
-            cur.execute('INSERT INTO students (admission_number, full_name, class_name, stream) VALUES (?, ?, ?, ?);',
-                        (admission_number, full_name, class_name, stream))
-            conn.commit()
-            logger.info('Student added: %s', admission_number)
-            return True, cur.lastrowid
-        except Exception as e:
-            logger.exception('Error adding student: %s', e)
-            return False, str(e)
-        finally:
-            self.dbm.close()
+def get_student(student_id):
+    db = DBManager()
+    return db.fetch_one("SELECT * FROM students WHERE id = ?", (student_id,))
 
-    def get_student_by_adm(self, admission_number):
-        conn = self.dbm.connect()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM students WHERE admission_number = ?;', (admission_number,))
-        student = cur.fetchone()
-        self.dbm.close()
-        return student
+def get_all_students():
+    db = DBManager()
+    return db.fetch_all("SELECT * FROM students")
 
-    def list_students(self, class_name=None):
-        conn = self.dbm.connect()
-        cur = conn.cursor()
-        if class_name:
-            cur.execute('SELECT * FROM students WHERE class_name = ? ORDER BY full_name;', (class_name,))
-        else:
-            cur.execute('SELECT * FROM students ORDER BY full_name;')
-        rows = cur.fetchall()
-        self.dbm.close()
-        return rows
+def search_students(query):
+    db = DBManager()
+    return db.fetch_all("SELECT * FROM students WHERE name LIKE ? OR admission_number LIKE ?", (f"%{query}%", f"%{query}%"))

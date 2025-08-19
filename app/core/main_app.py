@@ -1,32 +1,33 @@
-import logging, os
-from app.config import LOG_PATH
-from app.auth import AuthManager
-from app.student_manager import StudentManager
-from app.payment_manager import PaymentManager
-from app.fee_manager import FeeManager
-from app.report_manager import ReportManager
+import logging
+import os
+from auth import create_user, validate_login
+# Other imports as needed
 
-def setup_logging():
-    os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(LOG_PATH),
-            logging.StreamHandler()
-        ]
-    )
+if not os.path.exists('logs'):
+    os.makedirs('logs')
+logging.basicConfig(filename='logs/app.log', level=logging.INFO)
 
-def run_app():
-    setup_logging()
-    logger = logging.getLogger(__name__)
-    logger.info('Starting School Fee Management backend (desktop mode)')
-    # minimal CLI loop for demo/test
-    auth = AuthManager()
-    # create default superadmin if not exists
-    try:
-        auth.create_user('superadmin', 'change-me', role='superadmin')
-    except Exception:
-        pass
-    print('School Fee Management (backend demo)')
-    print('This is a starting point. Plug into PyQt UI later.')
+def main():
+    print("School Management CLI")
+    while True:
+        choice = input("1. Create User\n2. Login\n3. Exit\n")
+        if choice == '1':
+            username = input("Username: ")
+            pw = input("Password: ")
+            role = input("Role (admin/clerk): ")
+            create_user(username, pw, role)
+            print("User created.")
+        elif choice == '2':
+            username = input("Username: ")
+            pw = input("Password: ")
+            user = validate_login(username, pw)
+            if user:
+                print(f"Logged in as {user['role']}")
+                # Add more CLI options for testing
+            else:
+                print("Invalid credentials")
+        elif choice == '3':
+            break
+
+if __name__ == "__main__":
+    main()

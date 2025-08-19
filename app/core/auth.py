@@ -1,38 +1,21 @@
-from passlib.hash import bcrypt
-from app.db_manager import DatabaseManager
-import logging
+import bcrypt
+from db_manager import DBManager
 
-logger = logging.getLogger(__name__)
+def hash_password(pw):
+    return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt())
 
-class AuthManager:
-    def __init__(self, dbm=None):
-        self.dbm = dbm or DatabaseManager()
+def check_password(hashed, pw):
+    return bcrypt.checkpw(pw.encode('utf-8'), hashed)
 
-    def create_user(self, username, password, role='admin'):
-        conn = self.dbm.connect()
-        cur = conn.cursor()
-        password_hash = bcrypt.hash(password)
-        # users table is optional; create if not exists
-        cur.execute('''CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL,
-            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-        );''')
-        cur.execute('INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?);',
-                    (username, password_hash, role))
-        conn.commit()
-        logger.info('User created: %s', username)
-        self.dbm.close()
+def create_user(username, pw, role):
+    db = DBManager()
+    hashed = hash_password(pw)
+    db.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)", (username, hashed, role))
+    return db.last_id()
 
-    def verify_user(self, username, password):
-        conn = self.dbm.connect()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM users WHERE username = ?;', (username,))
-        user = cur.fetchone()
-        self.dbm.close()
-        if not user:
-            return False, 'User not found'
-        valid = bcrypt.verify(password, user['password_hash'])
-        return valid, user if valid else (False, 'Invalid credentials')
+def validate_login(username, pw):
+    db = DBManager()
+    user = db.fetch_one("SELECT id, password, role FROM users WHERE username = ?", (username,))
+    if user and check_password(user[1], pw):
+        return {'id': user[0], 'role': user[2]}
+    return None

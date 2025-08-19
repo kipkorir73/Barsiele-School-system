@@ -1,34 +1,40 @@
-import sqlite3
 import os
-from app.config import DB_TYPE, SQLITE_PATH, MYSQL_HOST, MYSQL_DB, MYSQL_USER, MYSQL_PASSWORD
-import logging
+import sqlite3
+from dotenv import load_dotenv
 
-logger = logging.getLogger(__name__)
+load_dotenv()
 
-class DatabaseManager:
-    def __init__(self, use_mysql=False):
-        self.use_mysql = use_mysql or (DB_TYPE == 'mysql')
-        self.conn = None
-
-    def connect(self):
-        if self.use_mysql:
+class DBManager:
+    def __init__(self):
+        self.db_type = os.getenv('DB_TYPE', 'sqlite')
+        if self.db_type == 'sqlite':
+            if not os.path.exists('data'):
+                os.makedirs('data')
+            self.conn = sqlite3.connect('data/school.db')
+        elif self.db_type == 'mysql':
             import mysql.connector
             self.conn = mysql.connector.connect(
-                host=MYSQL_HOST, database=MYSQL_DB, user=MYSQL_USER, password=MYSQL_PASSWORD
+                host=os.getenv('DB_HOST'),
+                user=os.getenv('DB_USER'),
+                password=os.getenv('DB_PASS'),
+                database=os.getenv('DB_NAME')
             )
+        self.cursor = self.conn.cursor()
+
+    def execute(self, query, params=()):
+        self.cursor.execute(query, params)
+        self.conn.commit()
+
+    def fetch_one(self, query, params=()):
+        self.cursor.execute(query, params)
+        return self.cursor.fetchone()
+
+    def fetch_all(self, query, params=()):
+        self.cursor.execute(query, params)
+        return self.cursor.fetchall()
+
+    def last_id(self):
+        if self.db_type == 'sqlite':
+            return self.cursor.lastrowid
         else:
-            os.makedirs(os.path.dirname(SQLITE_PATH), exist_ok=True)
-            self.conn = sqlite3.connect(SQLITE_PATH, detect_types=sqlite3.PARSE_DECLTYPES|sqlite3.PARSE_COLNAMES)
-            # Enable foreign keys
-            self.conn.execute('PRAGMA foreign_keys = ON;')
-        self.conn.row_factory = self._dict_factory
-        logger.info('Database connected: %s', 'MySQL' if self.use_mysql else 'SQLite')
-        return self.conn
-
-    def _dict_factory(self, cursor, row):
-        return {col[0]: row[idx] for idx, col in enumerate(cursor.description)}
-
-    def close(self):
-        if self.conn:
-            self.conn.close()
-            logger.info('Database connection closed.')
+            return self.cursor.lastrowid
