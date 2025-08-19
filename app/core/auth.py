@@ -1,5 +1,5 @@
 import bcrypt
-from db_manager import DBManager
+from .db_manager import DBManager
 
 def hash_password(pw):
     return bcrypt.hashpw(pw.encode('utf-8'), bcrypt.gensalt())

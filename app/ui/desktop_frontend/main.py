@@ -1,10 +1,10 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget
-from login import LoginWindow
-from student_tab import StudentTab
-from payment_tab import PaymentTab
-from report_tab import ReportTab
-from user_tab import UserTab
+from .login import LoginWindow
+from .student_tab import StudentTab
+from .payment_tab import PaymentTab
+from .report_tab import ReportTab
+from .user_tab import UserTab
 
 class MainWindow(QMainWindow):
     def __init__(self, user):
