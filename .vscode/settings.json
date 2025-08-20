@@ -1,0 +1,6 @@
+{
+    "CodeGPT.apiKey": "CodeGPT Plus Beta",
+    "editor.tabCompletion": "on",
+    "diffEditor.codeLens": true,
+    "MutableAI.upsell": false
+}

@@ -35,6 +35,15 @@ tables = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS class_fees (
+        class_id INTEGER NOT NULL,
+        term INTEGER NOT NULL,
+        amount REAL NOT NULL DEFAULT 0.0,
+        PRIMARY KEY (class_id, term),
+        FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS contributions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         student_id INTEGER NOT NULL,
@@ -64,6 +73,13 @@ tables = [
         receipt_no TEXT UNIQUE NOT NULL,
         filename TEXT NOT NULL,
         FOREIGN KEY (payment_id) REFERENCES payments(id) ON DELETE CASCADE
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS bus_locations (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
+        fee_per_term REAL NOT NULL DEFAULT 0.0
     )
     """,
     """

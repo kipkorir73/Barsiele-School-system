@@ -1,6 +1,6 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QDateEdit, QPushButton, QMessageBox, QFormLayout, QLabel, QTableWidget, QTableWidgetItem
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QDateEdit, QPushButton, QMessageBox, QFormLayout, QLabel, QTableWidget, QTableWidgetItem, QComboBox
 from PyQt6.QtCore import QDate
-from ...core.report_manager import generate_payment_summary
+from ...core.report_manager import generate_payment_summary, generate_class_report
 from ...core.db_manager import DBManager
 import os
 import logging
@@ -54,6 +54,16 @@ class ReportTab(QWidget):
         form_layout.addRow("End Date:", self.end_date)
         
         layout.addLayout(form_layout)
+
+        # Class report
+        class_form = QFormLayout()
+        self.class_combo = QComboBox()
+        self._load_classes()
+        class_form.addRow("Class:", self.class_combo)
+        class_btn = QPushButton("Generate Class Report")
+        class_btn.clicked.connect(self.generate_class_report)
+        class_form.addRow(class_btn)
+        layout.addLayout(class_form)
         
         gen_btn = QPushButton("Generate Payment Summary")
         gen_btn.clicked.connect(self.generate_summary)
@@ -80,7 +90,7 @@ class ReportTab(QWidget):
                 return
             filename = generate_payment_summary(start, end)
             with DBManager() as db:
-                payments = db.fetch_all("SELECT * FROM payments WHERE date BETWEEN %s AND %s", (start, end))
+                payments = db.fetch_all("SELECT * FROM payments WHERE date BETWEEN ? AND ?", (start, end))
                 total_amount = sum(p[2] for p in payments)
                 total_count = len(payments)
             self.summary_label.setText(
@@ -110,7 +120,7 @@ class ReportTab(QWidget):
     def load_payments_for_period(self, start_date, end_date):
         try:
             with DBManager() as db:
-                payments = db.fetch_all("SELECT * FROM payments WHERE date BETWEEN %s AND %s ORDER BY date DESC, id DESC", (start_date, end_date))
+                payments = db.fetch_all("SELECT * FROM payments WHERE date BETWEEN ? AND ? ORDER BY date DESC, id DESC", (start_date, end_date))
                 self.payments_table.setRowCount(len(payments))
                 for row, payment in enumerate(payments):
                     for col, data in enumerate(payment):
@@ -120,3 +130,24 @@ class ReportTab(QWidget):
                             self.payments_table.setItem(row, col, QTableWidgetItem(str(data or "")))
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load payments for period: {str(e)}")
+
+    def _load_classes(self):
+        try:
+            with DBManager() as db:
+                classes = db.fetch_all("SELECT id, name FROM classes ORDER BY name")
+                for cid, cname in classes:
+                    self.class_combo.addItem(cname, cid)
+        except Exception:
+            pass
+
+    def generate_class_report(self):
+        try:
+            class_id = self.class_combo.currentData()
+            if not class_id:
+                QMessageBox.warning(self, "Warning", "No class selected")
+                return
+            filename = generate_class_report(class_id)
+            QMessageBox.information(self, "Report", f"Class report saved: {filename}")
+            os.startfile(os.path.dirname(filename))
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to generate class report: {str(e)}")

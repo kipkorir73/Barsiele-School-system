@@ -113,3 +113,229 @@ Traceback (most recent call last):
 AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-08-20 10:16:47,763 - INFO - User logged in: admin
 2025-08-20 10:16:49,282 - INFO - Successful login for user: admin
+2025-08-20 11:06:01,875 - INFO - Created/ensured table: users
+2025-08-20 11:06:01,876 - INFO - Created/ensured table: classes
+2025-08-20 11:06:01,877 - INFO - Created/ensured table: students
+2025-08-20 11:06:01,877 - INFO - Created/ensured table: fees
+2025-08-20 11:06:01,877 - INFO - Created/ensured table: contributions
+2025-08-20 11:06:01,877 - INFO - Created/ensured table: payments
+2025-08-20 11:06:01,878 - INFO - Created/ensured table: receipts
+2025-08-20 11:06:01,878 - INFO - Created/ensured table: audit_logs
+2025-08-20 11:06:01,878 - INFO - Database initialization completed successfully
+2025-08-20 11:06:26,722 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 11:06:27,730 - INFO - User logged in: admin
+2025-08-20 11:06:29,094 - INFO - Successful login for user: admin
+2025-08-20 11:07:05,456 - INFO - Created student: Faith Yegon (ID: 3)
+2025-08-20 11:07:05,494 - INFO - Fee set for student 3: 0.0, Bus: 0.0
+2025-08-20 11:07:39,879 - INFO - Generated class report: reports/class_9_report_20250820_110739.csv
+2025-08-20 11:08:07,316 - INFO - Updated contribution rates: {'maize': 30.0, 'millet': 40.0, 'beans': 25.0}
+2025-08-20 11:08:59,644 - INFO - User logged in: clerk
+2025-08-20 11:08:59,720 - INFO - Successful login for user: clerk
+2025-08-20 11:12:45,269 - INFO - Created/ensured table: users
+2025-08-20 11:12:45,269 - INFO - Created/ensured table: classes
+2025-08-20 11:12:45,269 - INFO - Created/ensured table: students
+2025-08-20 11:12:45,269 - INFO - Created/ensured table: fees
+2025-08-20 11:12:45,270 - INFO - Created/ensured table: contributions
+2025-08-20 11:12:45,270 - INFO - Created/ensured table: payments
+2025-08-20 11:12:45,270 - INFO - Created/ensured table: receipts
+2025-08-20 11:12:45,270 - INFO - Created/ensured table: audit_logs
+2025-08-20 11:12:45,271 - INFO - Database initialization completed successfully
+2025-08-20 11:13:01,271 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 11:13:01,787 - INFO - User logged in: admin
+2025-08-20 11:13:04,428 - ERROR - Database error: name 'header' is not defined
+2025-08-20 11:13:04,428 - ERROR - Error loading dashboard data: name 'header' is not defined
+2025-08-20 11:13:08,262 - INFO - Successful login for user: admin
+2025-08-20 11:13:52,348 - ERROR - Database error: name 'header' is not defined
+2025-08-20 11:13:52,349 - ERROR - Error loading dashboard data: name 'header' is not defined
+2025-08-20 11:15:16,817 - ERROR - Database error: name 'header' is not defined
+2025-08-20 11:15:16,818 - ERROR - Error loading dashboard data: name 'header' is not defined
+2025-08-20 11:15:42,346 - INFO - Created/ensured table: users
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: classes
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: students
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: fees
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: contributions
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: payments
+2025-08-20 11:15:42,347 - INFO - Created/ensured table: receipts
+2025-08-20 11:15:42,348 - INFO - Created/ensured table: audit_logs
+2025-08-20 11:15:42,348 - INFO - Database initialization completed successfully
+2025-08-20 11:15:59,938 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 11:16:00,258 - INFO - User logged in: admin
+2025-08-20 11:16:01,133 - INFO - Successful login for user: admin
+2025-08-20 11:16:58,488 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_d6799195.pdf
+2025-08-20 11:17:36,581 - INFO - User logged in: clerk
+2025-08-20 11:17:36,634 - INFO - Successful login for user: clerk
+2025-08-20 11:18:28,774 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_9b0d6202.pdf
+2025-08-20 11:19:33,273 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_b0ea6692.pdf
+2025-08-20 11:21:44,907 - INFO - Created student: Noreen Cherotich (ID: 4)
+2025-08-20 11:21:44,925 - INFO - Fee set for student 4: 5100.0, Bus: 50.0
+2025-08-20 11:22:24,496 - INFO - Updated student 4
+2025-08-20 11:22:24,536 - INFO - Fee set for student 4: 5100.0, Bus: 50.0
+2025-08-20 11:23:09,158 - INFO - Updated student 4
+2025-08-20 11:23:09,182 - INFO - Fee set for student 4: 5100.0, Bus: 50.0
+2025-08-20 11:23:26,460 - INFO - Updated student 4
+2025-08-20 11:23:26,497 - INFO - Fee set for student 4: 5100.0, Bus: 50.0
+2025-08-20 11:35:18,108 - INFO - Created/ensured table: users
+2025-08-20 11:35:18,108 - INFO - Created/ensured table: classes
+2025-08-20 11:35:18,109 - INFO - Created/ensured table: students
+2025-08-20 11:35:18,109 - INFO - Created/ensured table: fees
+2025-08-20 11:35:18,126 - INFO - Created/ensured table: class_fees
+2025-08-20 11:35:18,126 - INFO - Created/ensured table: contributions
+2025-08-20 11:35:18,127 - INFO - Created/ensured table: payments
+2025-08-20 11:35:18,127 - INFO - Created/ensured table: receipts
+2025-08-20 11:35:18,127 - INFO - Created/ensured table: audit_logs
+2025-08-20 11:35:18,128 - INFO - Database initialization completed successfully
+2025-08-20 11:35:34,466 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 11:35:34,836 - INFO - User logged in: admin
+2025-08-20 11:35:36,859 - INFO - Successful login for user: admin
+2025-08-20 11:37:27,315 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_fe769d24.pdf
+2025-08-20 11:38:26,033 - INFO - Updated contribution rates: {'maize': 100.0, 'millet': 200.0, 'beans': 300.0}
+2025-08-20 11:39:06,715 - INFO - Created student: Elias Kipchumba (ID: 5)
+2025-08-20 11:39:06,787 - INFO - Fee set for student 5: 0.0, Bus: 60.0
+2025-08-20 11:39:46,859 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_a753be67.pdf
+2025-08-20 11:40:59,312 - INFO - Created student: Kevin ruben (ID: 6)
+2025-08-20 11:40:59,336 - INFO - Fee set for student 6: 12000.0, Bus: 0.0
+2025-08-20 11:41:33,868 - INFO - User logged in: clerk
+2025-08-20 11:41:33,927 - INFO - Successful login for user: clerk
+2025-08-20 11:42:02,369 - INFO - Generated class report: reports/class_4_report_20250820_114202.csv
+2025-08-20 11:50:13,907 - INFO - Created/ensured table: users
+2025-08-20 11:50:13,907 - INFO - Created/ensured table: classes
+2025-08-20 11:50:13,908 - INFO - Created/ensured table: students
+2025-08-20 11:50:13,908 - INFO - Created/ensured table: fees
+2025-08-20 11:50:13,908 - INFO - Created/ensured table: class_fees
+2025-08-20 11:50:13,909 - INFO - Created/ensured table: contributions
+2025-08-20 11:50:13,909 - INFO - Created/ensured table: payments
+2025-08-20 11:50:13,909 - INFO - Created/ensured table: receipts
+2025-08-20 11:50:13,940 - INFO - Created/ensured table: bus_locations
+2025-08-20 11:50:13,940 - INFO - Created/ensured table: audit_logs
+2025-08-20 11:50:13,949 - INFO - Database initialization completed successfully
+2025-08-20 11:50:27,002 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 11:50:27,524 - INFO - User logged in: admin
+2025-08-20 11:50:29,497 - INFO - Successful login for user: admin
+2025-08-20 11:51:25,092 - INFO - Set class fee: class=1 term=1 amount=4000.0
+2025-08-20 11:51:36,195 - INFO - Set class fee: class=1 term=2 amount=6000.0
+2025-08-20 11:51:45,091 - INFO - Set class fee: class=1 term=3 amount=7000.0
+2025-08-20 11:51:57,443 - INFO - Set class fee: class=2 term=1 amount=7000.0
+2025-08-20 11:52:06,698 - INFO - Set class fee: class=2 term=2 amount=8000.0
+2025-08-20 11:52:14,860 - INFO - Set class fee: class=2 term=3 amount=8000.0
+2025-08-20 11:52:27,726 - INFO - Set class fee: class=9 term=1 amount=9000.0
+2025-08-20 11:52:39,189 - INFO - Set class fee: class=9 term=2 amount=6000.0
+2025-08-20 11:52:51,837 - INFO - Set class fee: class=9 term=3 amount=9000.0
+2025-08-20 11:54:35,615 - INFO - Set class fee: class=4 term=1 amount=3000.0
+2025-08-20 11:54:43,321 - INFO - Set class fee: class=4 term=2 amount=4000.0
+2025-08-20 11:55:46,015 - INFO - Created student: Shadrack Kiprono (ID: 7)
+2025-08-20 11:55:46,037 - INFO - Fee set for student 7: 27000.0, Bus: 3000.0
+2025-08-20 11:56:25,232 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_5cabc8f1.pdf
+2025-08-20 12:00:48,675 - INFO - User logged in: clerk
+2025-08-20 12:00:48,732 - INFO - Successful login for user: clerk
+2025-08-20 12:01:31,421 - INFO - Created student: Sherly Cheruto (ID: 8)
+2025-08-20 12:01:31,462 - INFO - Fee set for student 8: 27000.0, Bus: 12000.0
+2025-08-20 12:02:44,628 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_fa7e42da.pdf
+2025-08-20 12:03:35,584 - INFO - Generated class report: reports/class_9_report_20250820_120335.csv
+2025-08-20 12:04:40,712 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_fe6a494c.pdf
+2025-08-20 12:05:42,899 - INFO - Created/ensured table: users
+2025-08-20 12:05:42,899 - INFO - Created/ensured table: classes
+2025-08-20 12:05:42,899 - INFO - Created/ensured table: students
+2025-08-20 12:05:42,899 - INFO - Created/ensured table: fees
+2025-08-20 12:05:42,899 - INFO - Created/ensured table: class_fees
+2025-08-20 12:05:42,900 - INFO - Created/ensured table: contributions
+2025-08-20 12:05:42,900 - INFO - Created/ensured table: payments
+2025-08-20 12:05:42,900 - INFO - Created/ensured table: receipts
+2025-08-20 12:05:42,900 - INFO - Created/ensured table: bus_locations
+2025-08-20 12:05:42,900 - INFO - Created/ensured table: audit_logs
+2025-08-20 12:05:42,901 - INFO - Database initialization completed successfully
+2025-08-20 12:05:57,542 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 12:05:58,086 - INFO - User logged in: admin
+2025-08-20 12:05:59,124 - INFO - Successful login for user: admin
+2025-08-20 12:07:08,707 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 12:07:08,707 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 12:07:08,707 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 12:07:33,347 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 12:07:33,348 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 12:07:33,348 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 12:10:26,185 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_642866fe.pdf
+2025-08-20 12:39:30,582 - INFO - Created/ensured table: users
+2025-08-20 12:39:30,583 - INFO - Created/ensured table: classes
+2025-08-20 12:39:30,584 - INFO - Created/ensured table: students
+2025-08-20 12:39:30,584 - INFO - Created/ensured table: fees
+2025-08-20 12:39:30,585 - INFO - Created/ensured table: class_fees
+2025-08-20 12:39:30,585 - INFO - Created/ensured table: contributions
+2025-08-20 12:39:30,586 - INFO - Created/ensured table: payments
+2025-08-20 12:39:30,586 - INFO - Created/ensured table: receipts
+2025-08-20 12:39:30,586 - INFO - Created/ensured table: bus_locations
+2025-08-20 12:39:30,586 - INFO - Created/ensured table: audit_logs
+2025-08-20 12:39:30,587 - INFO - Database initialization completed successfully
+2025-08-20 12:39:42,284 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 12:39:42,636 - INFO - User logged in: admin
+2025-08-20 12:39:43,791 - INFO - Successful login for user: admin
+2025-08-20 12:40:38,017 - INFO - Created student: Aron korir (ID: 9)
+2025-08-20 12:40:38,043 - INFO - Fee set for student 9: 12000.0, Bus: 2000.0
+2025-08-20 12:41:22,717 - INFO - Created student: Topis Kimutai (ID: 10)
+2025-08-20 12:41:22,737 - INFO - Fee set for student 10: 12000.0, Bus: 0.0
+2025-08-20 12:41:58,545 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_8a2b9aef.pdf
+2025-08-20 12:43:07,767 - INFO - Created student: Kevin koech (ID: 11)
+2025-08-20 12:43:07,790 - INFO - Fee set for student 11: 0.0, Bus: 12000.0
+2025-08-20 12:43:54,472 - INFO - Set class fee: class=5 term=1 amount=3000.0
+2025-08-20 12:44:02,681 - INFO - Set class fee: class=5 term=2 amount=4000.0
+2025-08-20 12:44:10,132 - INFO - Set class fee: class=5 term=3 amount=2000.0
+2025-08-20 12:45:06,309 - INFO - Generated class report: reports/class_9_report_20250820_124506.csv
+2025-08-20 12:46:01,946 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_033ae00a.pdf
+2025-08-20 12:47:01,109 - INFO - User logged in: clerk
+2025-08-20 12:47:01,165 - INFO - Successful login for user: clerk
+2025-08-20 14:20:04,227 - INFO - Created/ensured table: users
+2025-08-20 14:20:04,228 - INFO - Created/ensured table: classes
+2025-08-20 14:20:04,228 - INFO - Created/ensured table: students
+2025-08-20 14:20:04,228 - INFO - Created/ensured table: fees
+2025-08-20 14:20:04,228 - INFO - Created/ensured table: class_fees
+2025-08-20 14:20:04,228 - INFO - Created/ensured table: contributions
+2025-08-20 14:20:04,229 - INFO - Created/ensured table: payments
+2025-08-20 14:20:04,229 - INFO - Created/ensured table: receipts
+2025-08-20 14:20:04,229 - INFO - Created/ensured table: bus_locations
+2025-08-20 14:20:04,229 - INFO - Created/ensured table: audit_logs
+2025-08-20 14:20:04,230 - INFO - Database initialization completed successfully
+2025-08-20 14:20:23,440 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 14:20:23,799 - INFO - User logged in: admin
+2025-08-20 14:20:25,048 - INFO - Successful login for user: admin

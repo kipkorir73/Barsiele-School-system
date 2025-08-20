@@ -56,3 +56,36 @@ def generate_student_balance_report():
         except Exception as e:
             logging.error(f"Error generating student balance report: {e}")
             raise
+
+def generate_class_report(class_id: int):
+    """Export a CSV of students in a class with fees, total paid, and balances."""
+    os.makedirs('reports', exist_ok=True)
+    with DBManager() as db:
+        try:
+            query = (
+                """
+                SELECT s.id, s.admission_number, s.name,
+                       COALESCE(f.total_fees, 0) AS total_fees,
+                       COALESCE(f.bus_fee, 0) AS bus_fee,
+                       COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0) AS total_paid,
+                       (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) -
+                        COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0)) AS balance
+                FROM students s
+                LEFT JOIN fees f ON s.id = f.student_id
+                WHERE s.class_id = ?
+                ORDER BY s.name
+                """
+            )
+            results = db.fetch_all(query, (class_id,))
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"reports/class_{class_id}_report_{timestamp}.csv"
+            with open(filename, 'w', newline='', encoding='utf-8') as f:
+                writer = csv.writer(f)
+                writer.writerow(['Student ID', 'Adm No', 'Name', 'Total Fees', 'Bus Fee', 'Total Paid', 'Balance'])
+                for result in results:
+                    writer.writerow(result)
+            logging.info(f"Generated class report: {filename}")
+            return filename
+        except Exception as e:
+            logging.error(f"Error generating class report: {e}")
+            raise

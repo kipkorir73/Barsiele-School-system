@@ -1,9 +1,10 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QFormLayout, QFileDialog, QDialog, QMessageBox, QLabel, QComboBox, QSpinBox
 from PyQt6.QtCore import Qt
 from ...core.student_manager import get_all_students, create_student, update_student, get_student, search_students, get_highest_admission_number
-from ...core.fee_manager import set_fee, get_fee
+from ...core.fee_manager import set_fee, get_fee, get_class_term_fee
 from ...core.payment_manager import get_payments_for_student, get_balance
 from ...core.config import BUS_FEES
+from ...core.fee_manager import get_bus_locations
 from ...core.db_manager import DBManager
 import logging
 
@@ -40,10 +41,24 @@ class StudentTab(QWidget):
         """)
         
         layout = QVBoxLayout()
+
+        # Filters row
+        filter_layout = QHBoxLayout()
+        self.class_filter = QComboBox()
+        self._load_classes_filter()
+        filter_layout.addWidget(QLabel("Class:"))
+        filter_layout.addWidget(self.class_filter)
+
         self.search = QLineEdit()
         self.search.setPlaceholderText("Search by name or admission number")
         self.search.textChanged.connect(self.load_students)
-        layout.addWidget(self.search)
+        filter_layout.addWidget(self.search)
+
+        export_btn = QPushButton("Export Selected Class Report")
+        export_btn.clicked.connect(self.export_selected_class)
+        filter_layout.addWidget(export_btn)
+
+        layout.addLayout(filter_layout)
         
         self.table = QTableWidget()
         self.table.setColumnCount(6)
@@ -68,6 +83,10 @@ class StudentTab(QWidget):
         delete_btn.clicked.connect(self.delete_student)
         btn_layout.addWidget(delete_btn)
         
+        pay_btn = QPushButton("Record Payment for Selected")
+        pay_btn.clicked.connect(self.quick_record_payment)
+        btn_layout.addWidget(pay_btn)
+
         layout.addLayout(btn_layout)
         self.setLayout(layout)
         self.load_students()
@@ -75,8 +94,16 @@ class StudentTab(QWidget):
     def load_students(self):
         try:
             students = search_students(self.search.text())
+            # Filter by class if selected
+            selected_class_id = self.class_filter.currentData()
             self.table.setRowCount(len(students))
-            for row, student in enumerate(students):
+            row_index = 0
+            for student in students:
+                if selected_class_id and student[3] != selected_class_id:
+                    continue
+                row = row_index
+                row_index += 1
+                self.table.setRowCount(row_index)
                 # student structure: [id, admission_number, name, class_id, guardian_contact, profile_picture, bus_location, class_name]
                 self.table.setItem(row, 0, QTableWidgetItem(str(student[0])))  # ID
                 self.table.setItem(row, 1, QTableWidgetItem(str(student[1] or "")))  # Admission number
@@ -87,19 +114,64 @@ class StudentTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load students: {str(e)}")
 
+    def _load_classes_filter(self):
+        try:
+            with DBManager() as db:
+                classes = db.fetch_all("SELECT id, name FROM classes ORDER BY name")
+                self.class_filter.addItem("All Classes", None)
+                for cid, cname in classes:
+                    self.class_filter.addItem(cname, cid)
+            self.class_filter.currentIndexChanged.connect(self.load_students)
+        except Exception:
+            self.class_filter.addItem("All Classes", None)
+
+    def export_selected_class(self):
+        try:
+            class_id = self.class_filter.currentData()
+            if not class_id:
+                QMessageBox.warning(self, "Warning", "Please select a class to export")
+                return
+            from ...core.report_manager import generate_class_report
+            filename = generate_class_report(class_id)
+            QMessageBox.information(self, "Report", f"Class report saved: {filename}")
+            import os
+            os.startfile(os.path.dirname(filename))
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export class report: {str(e)}")
+
+    def quick_record_payment(self):
+        selected = self.table.currentRow()
+        if selected < 0:
+            QMessageBox.warning(self, "Warning", "Please select a student first")
+            return
+        try:
+            student_id = int(self.table.item(selected, 0).text())
+            from .payment_tab import PaymentTab
+            dlg = QDialog(self)
+            dlg.setWindowTitle("Record Payment")
+            v = QVBoxLayout(dlg)
+            pay_widget = PaymentTab(self.user)
+            for i in range(pay_widget.student_combo.count()):
+                if pay_widget.student_combo.itemData(i) == student_id:
+                    pay_widget.student_combo.setCurrentIndex(i)
+                    break
+            v.addWidget(pay_widget)
+            dlg.resize(700, 500)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open payment dialog: {str(e)}")
+
     def add_student(self):
         dialog = StudentFormDialog()
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
                 values = dialog.get_values()
-                # Auto-generate admission number
-                highest_adm = get_highest_admission_number()
-                new_adm_no = self.increment_admission_number(highest_adm)
-                values['admission_number'] = new_adm_no
                 student_id = create_student(**values)
-                set_fee(student_id, dialog.get_fee(), dialog.get_bus_fee())
+                term_fee = get_class_term_fee(values['class_id'], 1)
+                total_fee = float(dialog.get_fee()) if dialog.get_fee() > 0 else (term_fee * 3)
+                set_fee(student_id, total_fee, dialog.get_bus_fee())
                 self.load_students()
-                QMessageBox.information(self, "Success", f"Student added successfully with admission number: {new_adm_no}")
+                QMessageBox.information(self, "Success", f"Student added successfully with admission number: {values.get('admission_number','')}")
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to add student: {str(e)}")
 
@@ -202,6 +274,10 @@ class StudentFormDialog(QDialog):
         """)
         
         layout = QFormLayout()
+
+        # Admission number (auto-filled but editable)
+        self.adm = QLineEdit()
+        self.adm.setPlaceholderText("Auto-generated")
         
         self.name = QLineEdit()
         self.name.setPlaceholderText("Enter student name")
@@ -221,11 +297,7 @@ class StudentFormDialog(QDialog):
         layout.addRow("Total Fee (KSh):", self.fee)
         
         self.bus_fee = QComboBox()
-        self.bus_fee.addItems(list(BUS_FEES.keys()) + ["None"])
-        if student and len(student) > 6 and student[6] in BUS_FEES:
-            self.bus_fee.setCurrentText(student[6])
-        else:
-            self.bus_fee.setCurrentText("None")
+        self._load_bus_locations()
         layout.addRow("Bus Location:", self.bus_fee)
         
         self.picture = QLineEdit()
@@ -251,12 +323,22 @@ class StudentFormDialog(QDialog):
         
         if student:
             # student structure: [id, admission_number, name, class_id, guardian_contact, profile_picture, bus_location]
+            self.adm.setText(student[1] or "")
             self.name.setText(student[2] or "")
             if len(student) > 3 and student[3]:
                 self.set_class_by_id(student[3])
             self.guardian.setText(student[4] or "")
             if len(student) > 5:
                 self.picture.setText(student[5] or "")
+        else:
+            # Prefill next admission number
+            try:
+                highest = get_highest_admission_number()
+                self.adm.setText(self._increment_admission_number(highest))
+            except Exception:
+                self.adm.setText("ADM001")
+
+        layout.insertRow(0, "Admission No*:", self.adm)
 
     def load_classes(self):
         try:
@@ -278,9 +360,32 @@ class StudentFormDialog(QDialog):
         if file:
             self.picture.setText(file)
 
+    def _load_bus_locations(self):
+        try:
+            self.bus_fee.clear()
+            self.bus_fee.addItem("None")
+            # Load dynamic locations from DB
+            for _id, name, fee in get_bus_locations():
+                self.bus_fee.addItem(name)
+            # Fallback to config if table empty
+            if self.bus_fee.count() == 1:
+                for name in list(BUS_FEES.keys()):
+                    self.bus_fee.addItem(name)
+            if self.student and len(self.student) > 6 and self.student[6]:
+                self.bus_fee.setCurrentText(self.student[6])
+            else:
+                self.bus_fee.setCurrentText("None")
+        except Exception:
+            # Fallback
+            self.bus_fee.clear()
+            self.bus_fee.addItems(list(BUS_FEES.keys()) + ["None"])
+
     def save(self):
         if not self.name.text().strip():
             QMessageBox.warning(self, "Warning", "Please enter student name")
+            return
+        if not self.adm.text().strip():
+            QMessageBox.warning(self, "Warning", "Please enter admission number")
             return
         if self.class_.currentData() is None:
             QMessageBox.warning(self, "Warning", "Please select a class")
@@ -290,6 +395,7 @@ class StudentFormDialog(QDialog):
     def get_values(self):
         bus_location = self.bus_fee.currentText() if self.bus_fee.currentText() != "None" else None
         return {
+            "admission_number": self.adm.text().strip(),
             "name": self.name.text().strip(),
             "class_id": self.class_.currentData(),
             "guardian_contact": self.guardian.text().strip() if self.guardian.text().strip() else None,
@@ -301,7 +407,27 @@ class StudentFormDialog(QDialog):
         return float(self.fee.value())
 
     def get_bus_fee(self):
+        # Prefer dynamic bus_locations table
+        try:
+            with DBManager() as db:
+                row = db.fetch_one("SELECT fee_per_term FROM bus_locations WHERE name = ?", (self.bus_fee.currentText(),))
+                if row:
+                    return float(row[0])
+        except Exception:
+            pass
         return BUS_FEES.get(self.bus_fee.currentText(), 0.0) if self.bus_fee.currentText() != "None" else 0.0
+
+    def _increment_admission_number(self, adm_no: str) -> str:
+        try:
+            stripped = ''.join(ch for ch in adm_no if ch.isdigit())
+            if not stripped:
+                return "001"
+            next_num = str(int(stripped) + 1)
+            # Preserve prefix and zero-padding length
+            prefix = adm_no[:adm_no.find(stripped)] if stripped in adm_no else 'ADM'
+            return f"{prefix}{next_num.zfill(len(stripped))}"
+        except Exception:
+            return "ADM001"
 
 class StudentProfileDialog(QDialog):
     def __init__(self, student, payments, balance, total_fee):
@@ -380,6 +506,21 @@ class StudentProfileDialog(QDialog):
             payment_table.setItem(r, 3, QTableWidgetItem(str(p[5]) if p[5] else ""))  # clerk_id
             payment_table.setItem(r, 4, QTableWidgetItem(p[6] or ""))  # receipt_no
         layout.addWidget(payment_table)
+
+        # Contributions section
+        try:
+            with DBManager() as db:
+                contribs = db.fetch_all("SELECT item, quantity, cash_equivalent FROM contributions WHERE student_id = ?", (student[0],))
+        except Exception:
+            contribs = []
+        layout.addWidget(QLabel("In-kind Contributions:"))
+        contrib_table = QTableWidget(len(contribs), 3)
+        contrib_table.setHorizontalHeaderLabels(["Item", "Quantity", "Cash Equivalent"])
+        for r, c in enumerate(contribs):
+            contrib_table.setItem(r, 0, QTableWidgetItem(str(c[0] or "")))
+            contrib_table.setItem(r, 1, QTableWidgetItem(str(c[1] or 0)))
+            contrib_table.setItem(r, 2, QTableWidgetItem(f"KSh {float(c[2] or 0):,.2f}"))
+        layout.addWidget(contrib_table)
         
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)

@@ -1,6 +1,7 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QPushButton, QComboBox, QProgressBar, QLineEdit, QMessageBox, QInputDialog
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QPushButton, QComboBox, QProgressBar, QLineEdit, QMessageBox, QInputDialog, QDialog, QFrame
 from PyQt6.QtCore import Qt
 from ...core.db_manager import DBManager
+from ...core.fee_manager import set_class_term_fee, get_class_term_fee, set_bus_location, get_bus_locations
 from ...core.student_manager import get_all_students
 from ...core.student_manager import create_student, update_student, get_student
 from ...core.auth import Auth  # Use Auth class
@@ -26,23 +27,41 @@ class AdminDashboard(QWidget):
         """)
         
         layout = QVBoxLayout()
+
+        # Greeting header
+        greeting = self._greeting(self.user.get('username', 'Admin'))
+        self.header = QLabel(greeting)
+        self.header.setStyleSheet("font-size:16px; font-weight:bold;")
+        layout.addWidget(self.header)
         
-        # Summary Section
-        summary_layout = QHBoxLayout()
-        self.total_paid_label = QLabel("Total Paid: KSh 0.00")
-        self.total_arrears_label = QLabel("Total Arrears: KSh 0.00")
-        self.total_contrib_label = QLabel("Total Contributions: KSh 0.00")
-        summary_layout.addWidget(self.total_paid_label)
-        summary_layout.addWidget(self.total_arrears_label)
-        summary_layout.addWidget(self.total_contrib_label)
-        layout.addLayout(summary_layout)
+        # Action buttons
+        actions = QHBoxLayout()
+        export_btn = QPushButton("Export Report")
+        export_btn.clicked.connect(self.export_report)
+        refresh_btn = QPushButton("Refresh Data")
+        refresh_btn.clicked.connect(self.load_data)
+        actions.addWidget(export_btn)
+        actions.addWidget(refresh_btn)
+        actions.addStretch(1)
+        layout.addLayout(actions)
+
+        # KPI cards like the screenshot
+        kpi_layout = QHBoxLayout()
+        self.kpi_paid = self._create_kpi_card("Total Paid This Month", "KSh 0")
+        self.kpi_arrears = self._create_kpi_card("Total Arrears", "KSh 0")
+        self.kpi_students = self._create_kpi_card("Total Students", "0")
+        self.kpi_classes = self._create_kpi_card("Active Classes", "0")
+        for card in (self.kpi_paid, self.kpi_arrears, self.kpi_students, self.kpi_classes):
+            kpi_layout.addWidget(card)
+        layout.addLayout(kpi_layout)
         
         # Class-wise Arrears
         layout.addWidget(QLabel("Arrears by Class:"))
         self.class_arrears_table = QTableWidget()
-        self.class_arrears_table.setColumnCount(2)
-        self.class_arrears_table.setHorizontalHeaderLabels(["Class", "Arrears"])
+        self.class_arrears_table.setColumnCount(3)
+        self.class_arrears_table.setHorizontalHeaderLabels(["Class", "Students", "Arrears"])
         layout.addWidget(self.class_arrears_table)
+        self.class_arrears_table.cellDoubleClicked.connect(self.show_students_for_class)
         
         # High Arrears Students
         layout.addWidget(QLabel("Students with High Arrears (> KSh 500):"))
@@ -63,6 +82,18 @@ class AdminDashboard(QWidget):
         delete_class_btn.clicked.connect(self.delete_class)
         class_layout.addWidget(add_class_btn)
         class_layout.addWidget(delete_class_btn)
+
+        # Per-term fee controls
+        self.term_combo = QComboBox()
+        self.term_combo.addItems(["Term 1", "Term 2", "Term 3"])
+        self.term_amount = QLineEdit()
+        self.term_amount.setPlaceholderText("Amount")
+        save_term_btn = QPushButton("Save Term Fee")
+        save_term_btn.clicked.connect(self.save_term_fee)
+        class_layout.addWidget(QLabel(" | Term:"))
+        class_layout.addWidget(self.term_combo)
+        class_layout.addWidget(self.term_amount)
+        class_layout.addWidget(save_term_btn)
         layout.addLayout(class_layout)
         
         # User Management
@@ -83,6 +114,20 @@ class AdminDashboard(QWidget):
         user_layout.addLayout(user_btn_layout)
         layout.addLayout(user_layout)
         
+        # Bus locations management
+        bus_layout = QHBoxLayout()
+        self.bus_name = QLineEdit()
+        self.bus_name.setPlaceholderText("Bus location name")
+        self.bus_fee = QLineEdit()
+        self.bus_fee.setPlaceholderText("Fee per term")
+        save_bus_btn = QPushButton("Save Bus Location")
+        save_bus_btn.clicked.connect(self.save_bus_location)
+        bus_layout.addWidget(QLabel("Bus Location:"))
+        bus_layout.addWidget(self.bus_name)
+        bus_layout.addWidget(self.bus_fee)
+        bus_layout.addWidget(save_bus_btn)
+        layout.addLayout(bus_layout)
+
         # Logs
         layout.addWidget(QLabel("Recent Actions:"))
         self.logs_table = QTableWidget()
@@ -121,10 +166,15 @@ class AdminDashboard(QWidget):
                     self.progress_bar.setValue(i)
                     time.sleep(0.1)
                 
-                # Total Paid
-                total_paid_result = db.fetch_one("SELECT SUM(amount) FROM payments")
-                total_paid = total_paid_result[0] if total_paid_result and total_paid_result[0] else 0
-                self.total_paid_label.setText(f"Total Paid: KSh {total_paid:,.2f}")
+                # KPI - Total Paid This Month and trend vs last month
+                start_this, end_this = self._month_range(0)
+                start_prev, end_prev = self._month_range(-1)
+                r_this = db.fetch_one("SELECT SUM(amount) FROM payments WHERE date BETWEEN ? AND ?", (start_this, end_this))
+                r_prev = db.fetch_one("SELECT SUM(amount) FROM payments WHERE date BETWEEN ? AND ?", (start_prev, end_prev))
+                total_paid_this = r_this[0] if r_this and r_this[0] else 0
+                total_paid_prev = r_prev[0] if r_prev and r_prev[0] else 0
+                change = 0 if total_paid_prev == 0 else ((total_paid_this - total_paid_prev) / total_paid_prev) * 100
+                self._set_kpi_value(self.kpi_paid, f"KSh {total_paid_this:,.0f}", change)
                 
                 # Total Arrears - calculate from students
                 students = get_all_students()
@@ -133,16 +183,33 @@ class AdminDashboard(QWidget):
                     balance = get_balance(student[0])  # student[0] is the ID
                     if balance > 0:
                         total_arrears += balance
-                self.total_arrears_label.setText(f"Total Arrears: KSh {total_arrears:,.2f}")
+                self._set_kpi_value(self.kpi_arrears, f"KSh {total_arrears:,.0f}")
                 
                 # Total Contributions
                 total_contrib_result = db.fetch_one("SELECT SUM(cash_equivalent) FROM contributions")
                 total_contrib = total_contrib_result[0] if total_contrib_result and total_contrib_result[0] else 0
-                self.total_contrib_label.setText(f"Total Contributions: KSh {total_contrib:,.2f}")
+                # Show contributions in header as part of greeting subtitle
+                self.header.setText(self._greeting(self.user.get('username', 'Admin')) + f"  |  Contributions: KSh {total_contrib:,.0f}")
+
+                # Total Students and Classes
+                count_students = db.fetch_one("SELECT COUNT(*) FROM students")[0]
+                count_classes = db.fetch_one("SELECT COUNT(*) FROM classes")[0]
+                self._set_kpi_value(self.kpi_students, f"{count_students}")
+                self._set_kpi_value(self.kpi_classes, f"{count_classes}")
+
+                # How many should be paid and how much received
+                fees_total = db.fetch_one("SELECT SUM(total_fees + bus_fee) FROM fees")[0]
+                paid_total = db.fetch_one("SELECT SUM(amount) FROM payments")[0]
+                fees_total = fees_total if fees_total else 0
+                paid_total = paid_total if paid_total else 0
+                remaining = fees_total - paid_total
+                # Reuse contributions in header; append school totals
+                self.header.setText(self.header.text() + f"  |  Students: {count_students}  |  Should Pay: KSh {fees_total:,.0f}  |  Received: KSh {paid_total:,.0f}  |  Arrears: KSh {remaining:,.0f}")
                 
                 # Class-wise Arrears
                 class_arrears = db.fetch_all("""
-                    SELECT c.name, 
+                    SELECT c.name,
+                           COUNT(s.id) as num_students,
                            SUM(COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - 
                                COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0)) as arrears
                     FROM classes c
@@ -151,10 +218,11 @@ class AdminDashboard(QWidget):
                     GROUP BY c.name
                 """)
                 self.class_arrears_table.setRowCount(len(class_arrears))
-                for row, (class_name, arrears) in enumerate(class_arrears):
+                for row, (class_name, num_students, arrears) in enumerate(class_arrears):
                     self.class_arrears_table.setItem(row, 0, QTableWidgetItem(class_name or ""))
+                    self.class_arrears_table.setItem(row, 1, QTableWidgetItem(str(num_students or 0)))
                     arrears_value = arrears if arrears and arrears > 0 else 0
-                    self.class_arrears_table.setItem(row, 1, QTableWidgetItem(f"KSh {arrears_value:,.2f}"))
+                    self.class_arrears_table.setItem(row, 2, QTableWidgetItem(f"KSh {arrears_value:,.2f}"))
                 
                 # High Arrears Students
                 high_arrears_students = []
@@ -183,6 +251,104 @@ class AdminDashboard(QWidget):
             logging.error(f"Error loading dashboard data: {e}")
             QMessageBox.critical(self, "Error", f"Failed to load dashboard: {str(e)}")
 
+    def show_students_for_class(self, row, column):
+        try:
+            class_name_item = self.class_arrears_table.item(row, 0)
+            if not class_name_item:
+                return
+            class_name = class_name_item.text()
+            with DBManager() as db:
+                class_row = db.fetch_one("SELECT id FROM classes WHERE name = ?", (class_name,))
+                if not class_row:
+                    return
+                class_id = class_row[0]
+                students = db.fetch_all("SELECT admission_number, name FROM students WHERE class_id = ? ORDER BY name", (class_id,))
+            dialog = QDialog(self)
+            dialog.setWindowTitle(f"Students - {class_name}")
+            v = QVBoxLayout(dialog)
+            table = QTableWidget(len(students), 2)
+            table.setHorizontalHeaderLabels(["Adm No", "Name"])
+            for r, s in enumerate(students):
+                table.setItem(r, 0, QTableWidgetItem(str(s[0] or "")))
+                table.setItem(r, 1, QTableWidgetItem(str(s[1] or "")))
+            v.addWidget(table)
+            dialog.setLayout(v)
+            dialog.resize(400, 300)
+            dialog.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to show students: {str(e)}")
+
+    def _greeting(self, username: str) -> str:
+        hour = datetime.now().hour
+        if 5 <= hour < 12:
+            prefix = "Good morning"
+        elif 12 <= hour < 17:
+            prefix = "Good afternoon"
+        else:
+            prefix = "Good evening"
+        return f"{prefix} {username}"
+
+    def _create_kpi_card(self, title: str, value: str) -> QFrame:
+        frame = QFrame()
+        frame.setFrameShape(QFrame.Shape.StyledPanel)
+        frame.setStyleSheet("QFrame { background: white; border: 1px solid #bdc3c7; border-radius: 8px; padding: 12px; }")
+        v = QVBoxLayout(frame)
+        title_lbl = QLabel(title)
+        title_lbl.setStyleSheet("color:#7f8c8d; font-size:12px;")
+        value_lbl = QLabel(value)
+        value_lbl.setObjectName("value")
+        value_lbl.setStyleSheet("font-size:22px; font-weight:bold; color:#2c3e50;")
+        change_lbl = QLabel("")
+        change_lbl.setObjectName("change")
+        change_lbl.setStyleSheet("font-size:12px;")
+        v.addWidget(title_lbl)
+        v.addWidget(value_lbl)
+        v.addWidget(change_lbl)
+        return frame
+
+    def _set_kpi_value(self, frame: QFrame, value_text: str, change_pct: float | None = None):
+        value_lbl = frame.findChild(QLabel, "value")
+        change_lbl = frame.findChild(QLabel, "change")
+        if value_lbl:
+            value_lbl.setText(value_text)
+        if change_lbl is not None and change_pct is not None:
+            sign = "+" if change_pct >= 0 else ""
+            color = "#2ecc71" if change_pct >= 0 else "#e74c3c"
+            change_lbl.setText(f"{sign}{change_pct:.1f}% vs last month")
+            change_lbl.setStyleSheet(f"font-size:12px; color:{color};")
+        elif change_lbl is not None:
+            change_lbl.setText("")
+
+    def _month_range(self, relative_month: int):
+        # relative_month=0 -> current month, -1 -> previous month
+        base = datetime.now()
+        year = base.year
+        month = base.month + relative_month
+        while month <= 0:
+            month += 12
+            year -= 1
+        while month > 12:
+            month -= 12
+            year += 1
+        start = datetime(year, month, 1).strftime('%Y-%m-%d')
+        # next month start - 1 day
+        if month == 12:
+            end_dt = datetime(year + 1, 1, 1)
+        else:
+            end_dt = datetime(year, month + 1, 1)
+        end = (end_dt).strftime('%Y-%m-%d')
+        return start, end
+
+    def export_report(self):
+        try:
+            from ...core.report_manager import generate_student_balance_report
+            filename = generate_student_balance_report()
+            QMessageBox.information(self, "Report", f"Student balance report saved: {filename}")
+            import os
+            os.startfile(os.path.dirname(filename))
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to export report: {str(e)}")
+
     def add_class(self):
         try:
             class_name, ok = QInputDialog.getText(self, "Add Class", "Enter class name:")
@@ -209,6 +375,37 @@ class AdminDashboard(QWidget):
                     QMessageBox.information(self, "Success", f"Class {class_name} deleted")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to delete class: {str(e)}")
+
+    def save_term_fee(self):
+        try:
+            class_name = self.class_combo.currentText()
+            if not class_name:
+                QMessageBox.warning(self, "Warning", "Select a class first")
+                return
+            with DBManager() as db:
+                row = db.fetch_one("SELECT id FROM classes WHERE name = ?", (class_name,))
+                if not row:
+                    QMessageBox.warning(self, "Warning", "Unknown class")
+                    return
+                class_id = row[0]
+            term = self.term_combo.currentIndex() + 1
+            amount = float(self.term_amount.text() or 0)
+            set_class_term_fee(class_id, term, amount)
+            QMessageBox.information(self, "Saved", f"Saved fee for {class_name} - Term {term}: KSh {amount:,.2f}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save term fee: {str(e)}")
+
+    def save_bus_location(self):
+        try:
+            name = self.bus_name.text().strip()
+            amount = float(self.bus_fee.text() or 0)
+            if not name:
+                QMessageBox.warning(self, "Warning", "Enter a bus location name")
+                return
+            set_bus_location(name, amount)
+            QMessageBox.information(self, "Saved", f"Saved bus location {name}: KSh {amount:,.2f} per term")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save bus location: {str(e)}")
 
     def add_user(self):
         try:

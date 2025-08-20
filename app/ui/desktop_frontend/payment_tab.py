@@ -1,4 +1,4 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QComboBox, QPushButton, QDateEdit, QMessageBox, QFormLayout, QLabel, QDoubleSpinBox, QTableWidget, QTableWidgetItem, QHBoxLayout
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QComboBox, QPushButton, QDateEdit, QMessageBox, QFormLayout, QLabel, QDoubleSpinBox, QTableWidget, QTableWidgetItem, QHBoxLayout, QFrame
 from PyQt6.QtCore import QDate
 from ...core.student_manager import get_all_students
 from ...core.payment_manager import record_payment, get_balance
@@ -25,6 +25,14 @@ class PaymentTab(QWidget):
         """)
         
         layout = QVBoxLayout()
+        # Header: Clerk and date
+        header = QHBoxLayout()
+        self.header_label = QLabel(f"Clerk: {self.user.get('username', 'User')}")
+        self.date_label = QLabel(QDate.currentDate().toString('MMMM d, yyyy'))
+        header.addWidget(self.header_label)
+        header.addStretch(1)
+        header.addWidget(self.date_label)
+        layout.addLayout(header)
         form_layout = QFormLayout()
         
         self.student_combo = QComboBox()
@@ -44,6 +52,9 @@ class PaymentTab(QWidget):
         self.date.setDate(QDate.currentDate())
         self.date.setCalendarPopup(True)
         form_layout.addRow("Date:", self.date)
+        # Quick range filter for history
+        self.filter_start = QDate.currentDate().addDays(-7)
+        self.filter_end = QDate.currentDate()
         
         self.balance_label = QLabel("Balance: KSh 0.00")
         form_layout.addRow("Current Balance:", self.balance_label)
@@ -59,6 +70,7 @@ class PaymentTab(QWidget):
         self.payment_table = QTableWidget()
         self.payment_table.setColumnCount(7)
         self.payment_table.setHorizontalHeaderLabels(["ID", "Student ID", "Amount", "Method", "Date", "Clerk", "Receipt No"])
+        self.payment_table.setSortingEnabled(True)
         self.load_payments()
         layout.addWidget(self.payment_table)
         
@@ -93,7 +105,7 @@ class PaymentTab(QWidget):
     def load_payments(self):
         try:
             with DBManager() as db:
-                payments = db.fetch_all("SELECT * FROM payments ORDER BY date DESC LIMIT 10")
+                payments = db.fetch_all("SELECT * FROM payments ORDER BY date DESC, id DESC LIMIT 20")
                 self.payment_table.setRowCount(len(payments))
                 for row, payment in enumerate(payments):
                     for col, data in enumerate(payment):
@@ -118,13 +130,15 @@ class PaymentTab(QWidget):
                 
             method = self.method.currentText()
             date = self.date.date().toString("yyyy-MM-dd")
-            payment_id, receipt_no = record_payment(student_id, amount, method, date, self.user['id'])
-            
+            # For in-kind, convert quantity to cash equivalent for balances and store both
             if method in ['Maize', 'Millet', 'Beans']:
                 cash_equiv = amount * DEFAULT_RATES[method.lower()]
+                payment_id, receipt_no = record_payment(student_id, cash_equiv, method, date, self.user['id'])
                 with DBManager() as db:
                     db.execute("INSERT INTO contributions (student_id, item, quantity, cash_equivalent) VALUES (?, ?, ?, ?)",
                               (student_id, method, amount, cash_equiv))
+            else:
+                payment_id, receipt_no = record_payment(student_id, amount, method, date, self.user['id'])
             
             self.amount.setValue(0)
             self.update_balance()

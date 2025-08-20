@@ -1,5 +1,5 @@
 import sys
-from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMenuBar, QStatusBar, QProgressBar
+from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMenuBar, QStatusBar, QProgressBar, QToolBar, QPushButton, QLabel
 from PyQt6.QtCore import Qt, QTimer, QEvent
 from .student_tab import StudentTab
 from .payment_tab import PaymentTab
@@ -48,7 +48,10 @@ class MainWindow(QMainWindow):
         """)
         
         self.create_menu_bar()
-        self.statusBar().showMessage(f"Welcome, {user.get('username')} | Role: {user.get('role', 'Unknown').title()}")
+        greeting = self._greeting(user.get('username', 'User'))
+        today = datetime.now().strftime('%B %d, %Y')
+        self.statusBar().showMessage(f"{greeting} | {today} | Role: {user.get('role', 'Unknown').title()}")
+        self.create_toolbar()
         self.create_tabs()
         
         # Logout timer
@@ -70,6 +73,21 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_action = help_menu.addAction('Help')
         help_action.triggered.connect(self.show_help)
+
+    def create_toolbar(self):
+        toolbar = QToolBar("Main Toolbar", self)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, toolbar)
+        toolbar.setMovable(False)
+
+        # Left: App label
+        toolbar_label = QLabel("School Fee Management")
+        toolbar.addWidget(toolbar_label)
+        toolbar.addSeparator()
+
+        # Right: Logout button
+        logout_btn = QPushButton("Logout")
+        logout_btn.clicked.connect(self.logout)
+        toolbar.addWidget(logout_btn)
 
     def create_tabs(self):
         tabs = QTabWidget()
@@ -125,3 +143,13 @@ class MainWindow(QMainWindow):
         if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress):
             self.last_activity = datetime.now()
         return super().event(event)
+
+    def _greeting(self, username: str) -> str:
+        hour = datetime.now().hour
+        if 5 <= hour < 12:
+            prefix = "Good morning"
+        elif 12 <= hour < 17:
+            prefix = "Good afternoon"
+        else:
+            prefix = "Good evening"
+        return f"{prefix} {username}"
