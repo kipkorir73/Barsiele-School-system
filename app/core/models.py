@@ -3,8 +3,10 @@ tables = [
     CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT UNIQUE NOT NULL,
+        email TEXT UNIQUE NOT NULL,
         password TEXT NOT NULL,
-        role TEXT NOT NULL CHECK (role IN ('admin', 'clerk'))
+        role TEXT NOT NULL CHECK (role IN ('admin', 'clerk')),
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
     )
     """,
     """
@@ -31,6 +33,7 @@ tables = [
         student_id INTEGER UNIQUE NOT NULL,
         total_fees REAL NOT NULL DEFAULT 0.0,
         bus_fee REAL NOT NULL DEFAULT 0.0,
+        boarding_fee REAL NOT NULL DEFAULT 0.0,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
     )
     """,
@@ -54,6 +57,15 @@ tables = [
     )
     """,
     """
+    CREATE TABLE IF NOT EXISTS food_requirements (
+        class_id INTEGER PRIMARY KEY,
+        maize_kg REAL NOT NULL DEFAULT 0.0,
+        beans_kg REAL NOT NULL DEFAULT 0.0,
+        millet_kg REAL NOT NULL DEFAULT 0.0,
+        FOREIGN KEY (class_id) REFERENCES classes(id) ON DELETE CASCADE
+    )
+    """,
+    """
     CREATE TABLE IF NOT EXISTS payments (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         student_id INTEGER NOT NULL,
@@ -62,6 +74,10 @@ tables = [
         date TEXT NOT NULL,
         clerk_id INTEGER NOT NULL,
         receipt_no TEXT UNIQUE NOT NULL,
+        transaction_code TEXT UNIQUE,
+        bank_reference TEXT,
+        mpesa_code TEXT,
+        verified BOOLEAN DEFAULT 0,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
         FOREIGN KEY (clerk_id) REFERENCES users(id) ON DELETE CASCADE
     )
@@ -87,6 +103,8 @@ tables = [
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         action TEXT NOT NULL,
+        ip_address TEXT,
+        user_agent TEXT,
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
     )

@@ -25,14 +25,14 @@ class UserTab(QWidget):
                 background-color: white;
             }
             QPushButton {
-                background-color: #9b59b6;
+                background-color: #3498db;
                 color: white;
                 border-radius: 5px;
                 padding: 10px;
                 font-weight: bold;
             }
             QPushButton:hover {
-                background-color: #8e44ad;
+                background-color: #2980b9;
             }
             QTableWidget {
                 border: 1px solid #bdc3c7;
@@ -47,6 +47,10 @@ class UserTab(QWidget):
         self.username.setPlaceholderText("Username")
         form_layout.addRow("Username:", self.username)
         
+        self.email = QLineEdit()
+        self.email.setPlaceholderText("Email")
+        form_layout.addRow("Email:", self.email)
+
         self.password = QLineEdit()
         self.password.setPlaceholderText("Password")
         self.password.setEchoMode(QLineEdit.EchoMode.Password)
@@ -67,8 +71,8 @@ class UserTab(QWidget):
         layout.addWidget(delete_btn)
         
         self.table = QTableWidget()
-        self.table.setColumnCount(3)
-        self.table.setHorizontalHeaderLabels(["ID", "Username", "Role"])
+        self.table.setColumnCount(4)
+        self.table.setHorizontalHeaderLabels(["ID", "Username", "Email", "Role"])
         layout.addWidget(self.table)
         
         self.setLayout(layout)
@@ -77,15 +81,17 @@ class UserTab(QWidget):
     def add_user(self):
         try:
             username = self.username.text().strip()
+            email = self.email.text().strip()
             pw = self.password.text()
             role = self.role.currentText()
             
-            if not username or not pw:
+            if not username or not email or not pw:
                 QMessageBox.warning(self, "Warning", "Please fill all fields")
                 return
                 
-            Auth.create_user(username, pw, role)  # Use Auth.create_user
+            Auth.create_user(username, email, pw, role)  # Updated signature with email
             self.username.clear()
+            self.email.clear()
             self.password.clear()
             self.load_users()
             QMessageBox.information(self, "Success", "User added successfully")
@@ -112,7 +118,7 @@ class UserTab(QWidget):
     def load_users(self):
         try:
             with DBManager() as db:
-                users = db.fetch_all("SELECT id, username, role FROM users ORDER BY id DESC")
+                users = db.fetch_all("SELECT id, username, email, role FROM users ORDER BY id DESC")
                 self.table.setRowCount(len(users))
                 for row, user in enumerate(users):
                     for col, data in enumerate(user):

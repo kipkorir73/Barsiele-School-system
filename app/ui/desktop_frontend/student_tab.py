@@ -1,7 +1,8 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QFormLayout, QFileDialog, QDialog, QMessageBox, QLabel, QComboBox, QSpinBox
 from PyQt6.QtCore import Qt
 from ...core.student_manager import get_all_students, create_student, update_student, get_student, search_students, get_highest_admission_number
-from ...core.fee_manager import set_fee, get_fee, get_class_term_fee
+from ...core.fee_manager import set_fee, get_fee, get_class_term_fee, get_food_requirements
+
 from ...core.payment_manager import get_payments_for_student, get_balance
 from ...core.config import BUS_FEES
 from ...core.fee_manager import get_bus_locations
@@ -521,6 +522,40 @@ class StudentProfileDialog(QDialog):
             contrib_table.setItem(r, 1, QTableWidgetItem(str(c[1] or 0)))
             contrib_table.setItem(r, 2, QTableWidgetItem(f"KSh {float(c[2] or 0):,.2f}"))
         layout.addWidget(contrib_table)
+
+        # Per-student food requirement vs brought status (requirements are set per class)
+        try:
+            per_item_totals = {"maize": 0.0, "beans": 0.0, "millet": 0.0}
+            for c in contribs:
+                item = (c[0] or "").strip().lower()
+                qty = float(c[1] or 0)
+                if item in per_item_totals:
+                    per_item_totals[item] += qty
+            # Fetch class per-student requirements
+            req = {"maize": 0.0, "beans": 0.0, "millet": 0.0}
+            if len(student) > 3 and student[3]:
+                fr = get_food_requirements(student[3])
+                # Interpret stored numbers as per-student quota for that class
+                req = {"maize": float(fr.get('maize_kg', 0.0)),
+                       "beans": float(fr.get('beans_kg', 0.0)),
+                       "millet": float(fr.get('millet_kg', 0.0))}
+
+            layout.addWidget(QLabel("Food Requirement and Status (per student):"))
+            status_table = QTableWidget(3, 4)
+            status_table.setHorizontalHeaderLabels(["Item", "Required (kg)", "Brought (kg)", "Remaining (kg)"])
+            items = ["maize", "beans", "millet"]
+            for r, it in enumerate(items):
+                required = float(req.get(it, 0.0))
+                brought = float(per_item_totals.get(it, 0.0))
+                remaining = max(0.0, required - brought)
+                status_table.setItem(r, 0, QTableWidgetItem(it.capitalize()))
+                status_table.setItem(r, 1, QTableWidgetItem(f"{required:g}"))
+                status_table.setItem(r, 2, QTableWidgetItem(f"{brought:g}"))
+                status_table.setItem(r, 3, QTableWidgetItem(f"{remaining:g}"))
+            layout.addWidget(status_table)
+        except Exception as e:
+            # Do not fail the profile if requirements are missing or table not present
+            logging.warning(f"Failed to compute food status for student {student[0]}: {e}")
         
         close_btn = QPushButton("Close")
         close_btn.clicked.connect(self.accept)

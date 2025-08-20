@@ -51,7 +51,7 @@ class LoginWindow(QWidget):
         
         # Login form
         self.username = QLineEdit(self)
-        self.username.setPlaceholderText("Username")
+        self.username.setPlaceholderText("Username or Email")
         self.username.setMinimumHeight(35)
         main_layout.addWidget(self.username)
         
@@ -89,13 +89,13 @@ class LoginWindow(QWidget):
             from ...core.auth import Auth
             user = Auth.authenticate(username, password)
             if user:
+                # Preserve username from DB (in case login used email)
                 self.current_user = user
-                self.current_user['username'] = username
                 from .main import MainWindow
                 self.main_window = MainWindow(self.current_user)
                 self.main_window.show()
                 self.hide()
-                logging.info(f"Successful login for user: {username}")
+                logging.info(f"Successful login for user: {user['username']}")
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
                 self.password.clear()

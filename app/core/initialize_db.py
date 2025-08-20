@@ -40,7 +40,7 @@ def init_db():
                 # Add some initial data if tables are empty
                 ensure_initial_data(db)
                 
-            print("🎉 Database initialized successfully.")
+            print("Database initialized successfully.")
             logging.info("Database initialization completed successfully")
             return
             
@@ -58,8 +58,8 @@ def ensure_initial_data(db):
         if result[0] == 0:
             # Create default admin user
             from .auth import Auth
-            Auth.create_user("admin", "admin123", "admin")
-            print("✅ Default admin user created (admin/admin123)")
+            Auth.create_user("admin", "admin@barsiele.ac.ke", "admin123", "admin")
+            print("Default admin user created (admin/admin123)")
         
         # Check if we have any classes
         result = db.fetch_one("SELECT COUNT(*) FROM classes")
@@ -68,7 +68,7 @@ def ensure_initial_data(db):
             default_classes = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"]
             for class_name in default_classes:
                 db.execute("INSERT INTO classes (name) VALUES (?)", (class_name,))
-            print("✅ Default classes created")
+            print("Default classes created")
             
     except Exception as e:
         logging.warning(f"Could not add initial data: {e}")

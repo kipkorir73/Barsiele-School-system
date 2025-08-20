@@ -22,29 +22,13 @@ class MainWindow(QMainWindow):
         
         # Styling
         self.setStyleSheet("""
-            QMainWindow {
-                background-color: #ecf0f1;
-            }
-            QTabWidget::pane {
-                border: 1px solid #bdc3c7;
-                background-color: white;
-                border-radius: 5px;
-            }
+            QMainWindow { background-color: #ecf0f1; }
+            QTabWidget::pane { border: 1px solid #bdc3c7; background-color: white; border-radius: 5px; }
             QTabBar::tab {
-                background-color: #3498db;
-                color: white;
-                padding: 10px 15px;
-                margin-right: 2px;
-                border-radius: 5px;
+                background-color: #3498db; color: white; padding: 10px 15px; margin-right: 2px; border-radius: 5px;
             }
-            QTabBar::tab:selected {
-                background-color: #2980b9;
-                border-bottom: 2px solid #2ecc71;
-            }
-            QStatusBar {
-                background-color: #2c3e50;
-                color: white;
-            }
+            QTabBar::tab:selected { background-color: #2980b9; border-bottom: 2px solid #2980b9; }
+            QStatusBar { background-color: #2c3e50; color: white; }
         """)
         
         self.create_menu_bar()
@@ -91,13 +75,18 @@ class MainWindow(QMainWindow):
 
     def create_tabs(self):
         tabs = QTabWidget()
-        tabs.addTab(StudentTab(self.user), "👥 Students")
-        tabs.addTab(PaymentTab(self.user), "💰 Payments")
         if self.user.get('role') == 'admin':
+            # Dashboard first for admins
+            tabs.addTab(AdminDashboard(self.user), "🏠 Dashboard")
+            tabs.addTab(StudentTab(self.user), "👥 Students")
+            tabs.addTab(PaymentTab(self.user), "💰 Payments")
             tabs.addTab(ReportTab(), "📊 Reports")
             tabs.addTab(UserTab(), "👤 Users")
-            tabs.addTab(AdminDashboard(self.user), "🏠 Dashboard")
             tabs.addTab(SettingsTab(), "⚙️ Settings")
+            tabs.setCurrentIndex(0)
+        else:
+            tabs.addTab(StudentTab(self.user), "👥 Students")
+            tabs.addTab(PaymentTab(self.user), "💰 Payments")
         self.setCentralWidget(tabs)
 
     def logout(self):

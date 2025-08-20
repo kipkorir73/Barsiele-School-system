@@ -1,0 +1,85 @@
+2025-08-20 17:30:27,719 - INFO - Starting database initialization
+2025-08-20 17:30:27,722 - INFO - Created/ensured table: users
+2025-08-20 17:30:27,722 - INFO - Created/ensured table: classes
+2025-08-20 17:30:27,723 - INFO - Created/ensured table: students
+2025-08-20 17:30:27,723 - INFO - Created/ensured table: fees
+2025-08-20 17:30:27,723 - INFO - Created/ensured table: class_fees
+2025-08-20 17:30:27,723 - INFO - Created/ensured table: contributions
+2025-08-20 17:30:27,724 - INFO - Created/ensured table: payments
+2025-08-20 17:30:27,727 - INFO - Created/ensured table: receipts
+2025-08-20 17:30:27,727 - INFO - Created/ensured table: bus_locations
+2025-08-20 17:30:27,727 - INFO - Created/ensured table: audit_logs
+2025-08-20 17:30:27,730 - INFO - Database initialization completed successfully
+2025-08-20 17:30:27,730 - INFO - Database initialized successfully
+2025-08-20 17:30:39,964 - ERROR - Fetch one failed: SELECT * FROM users WHERE email = ? OR username = ? - no such column: email
+2025-08-20 17:30:39,964 - ERROR - Database error: no such column: email
+2025-08-20 17:30:41,481 - ERROR - Login error for user admin: no such column: email
+2025-08-20 17:34:30,155 - INFO - Starting database initialization
+2025-08-20 17:34:30,158 - INFO - Created/ensured table: users
+2025-08-20 17:34:30,158 - INFO - Created/ensured table: classes
+2025-08-20 17:34:30,158 - INFO - Created/ensured table: students
+2025-08-20 17:34:30,158 - INFO - Created/ensured table: fees
+2025-08-20 17:34:30,159 - INFO - Created/ensured table: class_fees
+2025-08-20 17:34:30,159 - INFO - Created/ensured table: contributions
+2025-08-20 17:34:30,159 - INFO - Created/ensured table: payments
+2025-08-20 17:34:30,159 - INFO - Created/ensured table: receipts
+2025-08-20 17:34:30,159 - INFO - Created/ensured table: bus_locations
+2025-08-20 17:34:30,160 - INFO - Created/ensured table: audit_logs
+2025-08-20 17:34:30,160 - INFO - Database initialization completed successfully
+2025-08-20 17:34:30,160 - INFO - Database initialized successfully
+2025-08-20 17:34:44,453 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 17:34:44,825 - ERROR - Database error: 'sqlite3.Row' object has no attribute 'get'
+2025-08-20 17:34:47,548 - ERROR - Login error for user admin: 'sqlite3.Row' object has no attribute 'get'
+2025-08-20 17:34:59,213 - ERROR - Database error: 'sqlite3.Row' object has no attribute 'get'
+2025-08-20 17:35:01,877 - ERROR - Login error for user admin: 'sqlite3.Row' object has no attribute 'get'
+2025-08-20 17:44:33,301 - INFO - Starting database initialization
+2025-08-20 17:44:33,304 - INFO - Created/ensured table: users
+2025-08-20 17:44:33,304 - INFO - Created/ensured table: classes
+2025-08-20 17:44:33,305 - INFO - Created/ensured table: students
+2025-08-20 17:44:33,305 - INFO - Created/ensured table: fees
+2025-08-20 17:44:33,305 - INFO - Created/ensured table: class_fees
+2025-08-20 17:44:33,306 - INFO - Created/ensured table: contributions
+2025-08-20 17:44:33,306 - INFO - Created/ensured table: payments
+2025-08-20 17:44:33,307 - INFO - Created/ensured table: receipts
+2025-08-20 17:44:33,307 - INFO - Created/ensured table: bus_locations
+2025-08-20 17:44:33,307 - INFO - Created/ensured table: audit_logs
+2025-08-20 17:44:33,308 - INFO - Database initialization completed successfully
+2025-08-20 17:44:33,308 - INFO - Database initialized successfully
+2025-08-20 17:44:57,843 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 17:44:58,184 - INFO - User logged in: admin (admin@barsiele.ac.ke)
+2025-08-20 17:44:59,094 - INFO - Successful login for user: admin@barsiele.ac.ke
+2025-08-20 17:45:26,909 - INFO - Created student: Collins (ID: 1)
+2025-08-20 17:45:26,934 - INFO - Fee set for student 1: 0.0, Bus: 0.0
+2025-08-20 17:53:26,940 - INFO - Starting database initialization
+2025-08-20 17:53:26,944 - INFO - Created/ensured table: users
+2025-08-20 17:53:26,945 - INFO - Created/ensured table: classes
+2025-08-20 17:53:26,945 - INFO - Created/ensured table: students
+2025-08-20 17:53:26,945 - INFO - Created/ensured table: fees
+2025-08-20 17:53:26,946 - INFO - Created/ensured table: class_fees
+2025-08-20 17:53:26,946 - INFO - Created/ensured table: contributions
+2025-08-20 17:53:26,947 - INFO - Created/ensured table: payments
+2025-08-20 17:53:26,948 - INFO - Created/ensured table: receipts
+2025-08-20 17:53:26,950 - INFO - Created/ensured table: bus_locations
+2025-08-20 17:53:26,951 - INFO - Created/ensured table: audit_logs
+2025-08-20 17:53:26,952 - INFO - Database initialization completed successfully
+2025-08-20 17:53:26,952 - INFO - Database initialized successfully
+2025-08-20 17:54:11,009 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 17:54:11,350 - INFO - User logged in: admin (admin@barsiele.ac.ke)
+2025-08-20 17:54:12,594 - INFO - Successful login for user: admin
+2025-08-20 17:57:47,257 - INFO - User created: Collins (kipkorirc583@gmail.com) - admin
+2025-08-20 17:58:17,522 - INFO - User created: Kipkorir (collohuncho@gmail.com) - clerk

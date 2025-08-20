@@ -1,11 +1,22 @@
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QPushButton, QComboBox, QProgressBar, QLineEdit, QMessageBox, QInputDialog, QDialog, QFrame
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLabel, QPushButton, QComboBox, QProgressBar, QLineEdit, QMessageBox, QInputDialog, QDialog, QFrame, QGridLayout, QScrollArea
 from PyQt6.QtCore import Qt
 from ...core.db_manager import DBManager
-from ...core.fee_manager import set_class_term_fee, get_class_term_fee, set_bus_location, get_bus_locations
+from ...core.fee_manager import (
+    set_class_term_fee,
+    get_class_term_fee,
+    set_bus_location,
+    get_bus_locations,
+    set_boarding_fee_for_class,
+    set_food_requirements,
+    get_food_requirements,
+)
 from ...core.student_manager import get_all_students
 from ...core.student_manager import create_student, update_student, get_student
 from ...core.auth import Auth  # Use Auth class
 from ...core.payment_manager import get_balance  # Import the missing function
+from .user_management import UserManagementDialog
+from .arrears_detail import ArrearsDetailDialog, HighArrearsDialog
+from .activity_logs import ActivityLogsDialog
 import logging
 import time
 from datetime import datetime
@@ -17,22 +28,96 @@ class AdminDashboard(QWidget):
         super().__init__()
         self.user = user
         self.setStyleSheet("""
-            QWidget { background-color: #ecf0f1; }
-            QLabel { color: #2c3e50; font-size: 14px; }
-            QTableWidget { border: 1px solid #bdc3c7; background-color: white; }
-            QPushButton { background-color: #3498db; color: white; border-radius: 5px; padding: 10px; font-weight: bold; }
+            QWidget { background-color: #f8f9fa; }
+            QLabel { color: #2c3e50; font-size: 14px; font-weight: bold; }
+            QTableWidget { 
+                border: 2px solid #3498db; 
+                background-color: white; 
+                gridline-color: #bdc3c7;
+                selection-background-color: #3498db;
+            }
+            QPushButton { 
+                background-color: #3498db; 
+                color: white; 
+                border-radius: 8px; 
+                padding: 12px 20px; 
+                font-weight: bold; 
+                font-size: 14px;
+            }
             QPushButton:hover { background-color: #2980b9; }
-            QComboBox, QLineEdit { border: 2px solid #3498db; border-radius: 5px; padding: 5px; background-color: white; }
-            QProgressBar { border: 2px solid #3498db; border-radius: 5px; text-align: center; }
+            QPushButton:pressed { background-color: #2471a3; }
+            QComboBox, QLineEdit { 
+                border: 2px solid #3498db; 
+                border-radius: 8px; 
+                padding: 8px; 
+                background-color: white; 
+                font-size: 14px;
+            }
+            QComboBox:focus, QLineEdit:focus { border-color: #2980b9; }
+            QProgressBar { 
+                border: 2px solid #3498db; 
+                border-radius: 8px; 
+                text-align: center; 
+                font-weight: bold;
+            }
         """)
         
-        layout = QVBoxLayout()
+        # Use a scroll area to allow vertical scrolling when content overflows
+        outer_layout = QVBoxLayout(self)
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+
+        # School Header
+        school_header = QLabel("Barsiele Sunrise Academy")
+        school_header.setStyleSheet("font-size: 28px; font-weight: bold; color: #3498db; margin-bottom: 5px;")
+        school_header.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(school_header)
+        
+        school_info = QLabel("P.O Box 117 LONDIANI")
+        school_info.setStyleSheet("font-size: 16px; color: #7f8c8d; margin-bottom: 5px;")
+        school_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(school_info)
+        
+        motto = QLabel("Together we Rise")
+        motto.setStyleSheet("font-size: 18px; font-style: italic; color: #3498db; margin-bottom: 20px;")
+        motto.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(motto)
 
         # Greeting header
         greeting = self._greeting(self.user.get('username', 'Admin'))
         self.header = QLabel(greeting)
-        self.header.setStyleSheet("font-size:16px; font-weight:bold;")
+        self.header.setStyleSheet("font-size:18px; font-weight:bold; color: #2c3e50; margin-bottom: 20px;")
         layout.addWidget(self.header)
+        
+        # Management Cards
+        cards_layout = QGridLayout()
+        cards_layout.setHorizontalSpacing(8)
+        cards_layout.setVerticalSpacing(8)
+        cards_layout.setContentsMargins(6, 6, 6, 6)
+        
+        # User Management Card
+        user_mgmt_card = self._create_management_card("User Management", "Manage admin and clerk accounts", self.open_user_management)
+        cards_layout.addWidget(user_mgmt_card, 0, 0)
+        
+        # Arrears Management Card
+        arrears_card = self._create_management_card("Arrears Details", "View detailed arrears by class", self.open_arrears_detail)
+        cards_layout.addWidget(arrears_card, 0, 1)
+        
+        # High Arrears Card
+        high_arrears_card = self._create_management_card("High Arrears", "Students with arrears > KSh 1,000", self.open_high_arrears)
+        cards_layout.addWidget(high_arrears_card, 0, 2)
+        
+        # Activity Logs Card
+        logs_card = self._create_management_card("Activity Logs", "View system activity and login logs", self.open_activity_logs)
+        cards_layout.addWidget(logs_card, 1, 0)
+        
+        # Food Collection Overview Card
+        food_card = self._create_management_card("Food Collection", "Totals collected vs required; see classes with biggest deficit", self.open_food_overview)
+        cards_layout.addWidget(food_card, 1, 1)
+        
+        layout.addLayout(cards_layout)
         
         # Action buttons
         actions = QHBoxLayout()
@@ -45,15 +130,7 @@ class AdminDashboard(QWidget):
         actions.addStretch(1)
         layout.addLayout(actions)
 
-        # KPI cards like the screenshot
-        kpi_layout = QHBoxLayout()
-        self.kpi_paid = self._create_kpi_card("Total Paid This Month", "KSh 0")
-        self.kpi_arrears = self._create_kpi_card("Total Arrears", "KSh 0")
-        self.kpi_students = self._create_kpi_card("Total Students", "0")
-        self.kpi_classes = self._create_kpi_card("Active Classes", "0")
-        for card in (self.kpi_paid, self.kpi_arrears, self.kpi_students, self.kpi_classes):
-            kpi_layout.addWidget(card)
-        layout.addLayout(kpi_layout)
+        # KPI cards removed per request to simplify dashboard
         
         # Class-wise Arrears
         layout.addWidget(QLabel("Arrears by Class:"))
@@ -96,23 +173,6 @@ class AdminDashboard(QWidget):
         class_layout.addWidget(save_term_btn)
         layout.addLayout(class_layout)
         
-        # User Management
-        user_layout = QHBoxLayout()
-        self.user_table = QTableWidget()
-        self.user_table.setColumnCount(3)
-        self.user_table.setHorizontalHeaderLabels(["ID", "Username", "Role"])
-        self.load_users()
-        user_layout.addWidget(self.user_table)
-        
-        user_btn_layout = QVBoxLayout()
-        add_user_btn = QPushButton("Add User")
-        add_user_btn.clicked.connect(self.add_user)
-        delete_user_btn = QPushButton("Delete User")
-        delete_user_btn.clicked.connect(self.delete_user)
-        user_btn_layout.addWidget(add_user_btn)
-        user_btn_layout.addWidget(delete_user_btn)
-        user_layout.addLayout(user_btn_layout)
-        layout.addLayout(user_layout)
         
         # Bus locations management
         bus_layout = QHBoxLayout()
@@ -128,20 +188,48 @@ class AdminDashboard(QWidget):
         bus_layout.addWidget(save_bus_btn)
         layout.addLayout(bus_layout)
 
-        # Logs
-        layout.addWidget(QLabel("Recent Actions:"))
-        self.logs_table = QTableWidget()
-        self.logs_table.setColumnCount(3)
-        self.logs_table.setHorizontalHeaderLabels(["User ID", "Action", "Timestamp"])
-        layout.addWidget(self.logs_table)
+        # Progress Bar (moved to bottom below logs summary)
+
+        # Food Requirements and Boarding Fee Controls
+        controls = QHBoxLayout()
+        # Food requirements
+        self.food_maize = QLineEdit(); self.food_maize.setPlaceholderText("Maize kg")
+        self.food_beans = QLineEdit(); self.food_beans.setPlaceholderText("Beans kg")
+        self.food_millet = QLineEdit(); self.food_millet.setPlaceholderText("Millet kg")
+        save_food_btn = QPushButton("Save Food Requirements")
+        save_food_btn.clicked.connect(self.save_food_requirements)
+        controls.addWidget(QLabel("Food (per class):"))
+        controls.addWidget(self.food_maize)
+        controls.addWidget(self.food_beans)
+        controls.addWidget(self.food_millet)
+        controls.addWidget(save_food_btn)
+        # Boarding fee
+        self.boarding_amount = QLineEdit(); self.boarding_amount.setPlaceholderText("Boarding fee")
+        apply_boarding_btn = QPushButton("Apply Boarding Fee to Class")
+        apply_boarding_btn.clicked.connect(self.apply_boarding_fee)
+        controls.addWidget(QLabel(" | Boarding:"))
+        controls.addWidget(self.boarding_amount)
+        controls.addWidget(apply_boarding_btn)
+        layout.addLayout(controls)
+
+        # Load existing food requirements for selected class initially
+        self.class_combo.currentTextChanged.connect(self.load_food_requirements)
+        self.load_food_requirements()
         
-        # Progress Bar
+        # Move Recent Actions Summary to the bottom of the page
+        layout.addWidget(QLabel("Recent Actions Summary:"))
+        self.logs_summary = QLabel("Loading recent activity...")
+        self.logs_summary.setStyleSheet("padding: 10px; background-color: #ecf0f1; border-radius: 5px; margin-bottom: 10px;")
+        layout.addWidget(self.logs_summary)
+        
+        # Progress Bar - bottom most
         self.progress_bar = QProgressBar()
         self.progress_bar.setRange(0, 100)
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
         
-        self.setLayout(layout)
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
         self.load_data()
 
     def load_classes(self):
@@ -150,13 +238,156 @@ class AdminDashboard(QWidget):
             self.class_combo.clear()
             self.class_combo.addItems([c[0] for c in classes])
 
-    def load_users(self):
-        with DBManager() as db:
-            users = db.fetch_all("SELECT id, username, role FROM users")
-            self.user_table.setRowCount(len(users))
-            for row, user in enumerate(users):
-                for col, data in enumerate(user):
-                    self.user_table.setItem(row, col, QTableWidgetItem(str(data or "")))
+    def _create_management_card(self, title, description, click_handler):
+        """Create a clickable management card"""
+        card = QFrame()
+        card.setFrameShape(QFrame.Shape.StyledPanel)
+        card.setStyleSheet("""
+            QFrame { 
+                background: white; 
+                border: 1px solid #3498db; 
+                border-radius: 6px; 
+                padding: 8px;
+                margin: 2px;
+            }
+            QFrame:hover { 
+                background: #f0f6ff; 
+                border-color: #2980b9;
+            }
+        """)
+        card.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        layout = QVBoxLayout(card)
+        layout.setSpacing(4)
+        
+        title_label = QLabel(title)
+        title_label.setStyleSheet("font-size: 14px; font-weight: bold; color: #3498db; margin-bottom: 4px;")
+        layout.addWidget(title_label)
+        
+        desc_label = QLabel(description)
+        desc_label.setStyleSheet("font-size: 11px; color: #7f8c8d; margin-bottom: 4px;")
+        desc_label.setWordWrap(True)
+        layout.addWidget(desc_label)
+        
+        # Make the card clickable
+        card.mousePressEvent = lambda event: click_handler()
+        
+        return card
+    
+    def open_user_management(self):
+        dialog = UserManagementDialog(self)
+        dialog.exec()
+        
+    def open_arrears_detail(self):
+        dialog = ArrearsDetailDialog(parent=self)
+        dialog.exec()
+        
+    def open_high_arrears(self):
+        dialog = HighArrearsDialog(self)
+        dialog.exec()
+        
+    def open_activity_logs(self):
+        dialog = ActivityLogsDialog(self)
+        dialog.exec()
+
+    def open_food_overview(self):
+        """Show totals collected vs required overall and per class, with deficits."""
+        try:
+            with DBManager() as db:
+                # Validate required tables
+                tables = {row[0] for row in db.fetch_all("SELECT name FROM sqlite_master WHERE type='table'")}
+                if not {'classes', 'students', 'contributions', 'food_requirements'} <= tables:
+                    QMessageBox.warning(self, "Unavailable", "Food tracking tables are missing.")
+                    return
+
+                classes = db.fetch_all("SELECT id, name FROM classes ORDER BY name")
+
+                # Build per-class student counts
+                counts = {cid: 0 for cid, _ in classes}
+                for (cid,) in db.fetch_all("SELECT class_id FROM students WHERE class_id IS NOT NULL"):
+                    if cid in counts:
+                        counts[cid] += 1
+
+                # Requirements per class (per-student quotas x student count)
+                req_map = {cid: {'maize': 0.0, 'beans': 0.0, 'millet': 0.0} for cid, _ in classes}
+                for (cid, maize, beans, millet) in db.fetch_all("SELECT class_id, maize_kg, beans_kg, millet_kg FROM food_requirements"):
+                    if cid in counts and cid in req_map:
+                        req_map[cid]['maize'] = float(maize or 0) * counts[cid]
+                        req_map[cid]['beans'] = float(beans or 0) * counts[cid]
+                        req_map[cid]['millet'] = float(millet or 0) * counts[cid]
+
+                # Collected per class from contributions
+                coll_map = {cid: {'maize': 0.0, 'beans': 0.0, 'millet': 0.0} for cid, _ in classes}
+                rows = db.fetch_all(
+                    """
+                    SELECT s.class_id, c.item, SUM(c.quantity)
+                    FROM contributions c
+                    JOIN students s ON s.id = c.student_id
+                    WHERE s.class_id IS NOT NULL
+                    GROUP BY s.class_id, c.item
+                    """
+                )
+                for (cid, item, qty) in rows:
+                    key = (item or '').strip().lower()
+                    if cid in coll_map and key in coll_map[cid]:
+                        coll_map[cid][key] += float(qty or 0)
+
+                # Overall totals
+                total_req = {'maize': 0.0, 'beans': 0.0, 'millet': 0.0}
+                total_coll = {'maize': 0.0, 'beans': 0.0, 'millet': 0.0}
+                for cid, _ in classes:
+                    for k in total_req:
+                        total_req[k] += req_map[cid][k]
+                        total_coll[k] += coll_map[cid][k]
+
+            # Build dialog UI
+            d = QDialog(self)
+            d.setWindowTitle("Food Collection Overview")
+            v = QVBoxLayout(d)
+
+            # Overall table
+            v.addWidget(QLabel("Overall Totals:"))
+            overall = QTableWidget(3, 4)
+            overall.setHorizontalHeaderLabels(["Item", "Required (kg)", "Collected (kg)", "Remaining (kg)"])
+            items = ["maize", "beans", "millet"]
+            for r, it in enumerate(items):
+                req = total_req[it]
+                coll = total_coll[it]
+                rem = max(0.0, req - coll)
+                overall.setItem(r, 0, QTableWidgetItem(it.capitalize()))
+                overall.setItem(r, 1, QTableWidgetItem(f"{req:g}"))
+                overall.setItem(r, 2, QTableWidgetItem(f"{coll:g}"))
+                overall.setItem(r, 3, QTableWidgetItem(f"{rem:g}"))
+            v.addWidget(overall)
+
+            # Per-class table, ranked by total remaining desc
+            v.addWidget(QLabel("Per Class Totals (ranked by deficit):"))
+            per_class = QTableWidget(len(classes), 5)
+            per_class.setHorizontalHeaderLabels(["Class", "Required (kg)", "Collected (kg)", "Remaining (kg)", "Students"])
+
+            # Compute rankings
+            rank_data = []
+            for cid, cname in classes:
+                req_sum = req_map[cid]['maize'] + req_map[cid]['beans'] + req_map[cid]['millet']
+                coll_sum = coll_map[cid]['maize'] + coll_map[cid]['beans'] + coll_map[cid]['millet']
+                rem_sum = max(0.0, req_sum - coll_sum)
+                rank_data.append((rem_sum, cid, cname, req_sum, coll_sum))
+            rank_data.sort(reverse=True)
+
+            per_class.setRowCount(len(rank_data))
+            for r, (rem_sum, cid, cname, req_sum, coll_sum) in enumerate(rank_data):
+                per_class.setItem(r, 0, QTableWidgetItem(cname))
+                per_class.setItem(r, 1, QTableWidgetItem(f"{req_sum:g}"))
+                per_class.setItem(r, 2, QTableWidgetItem(f"{coll_sum:g}"))
+                per_class.setItem(r, 3, QTableWidgetItem(f"{rem_sum:g}"))
+                per_class.setItem(r, 4, QTableWidgetItem(str(counts.get(cid, 0))))
+            v.addWidget(per_class)
+
+            close_btn = QPushButton("Close"); close_btn.clicked.connect(d.accept)
+            v.addWidget(close_btn)
+            d.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to open Food Overview: {e}")
 
     def load_data(self):
         try:
@@ -166,51 +397,22 @@ class AdminDashboard(QWidget):
                     self.progress_bar.setValue(i)
                     time.sleep(0.1)
                 
-                # KPI - Total Paid This Month and trend vs last month
-                start_this, end_this = self._month_range(0)
-                start_prev, end_prev = self._month_range(-1)
-                r_this = db.fetch_one("SELECT SUM(amount) FROM payments WHERE date BETWEEN ? AND ?", (start_this, end_this))
-                r_prev = db.fetch_one("SELECT SUM(amount) FROM payments WHERE date BETWEEN ? AND ?", (start_prev, end_prev))
-                total_paid_this = r_this[0] if r_this and r_this[0] else 0
-                total_paid_prev = r_prev[0] if r_prev and r_prev[0] else 0
-                change = 0 if total_paid_prev == 0 else ((total_paid_this - total_paid_prev) / total_paid_prev) * 100
-                self._set_kpi_value(self.kpi_paid, f"KSh {total_paid_this:,.0f}", change)
-                
-                # Total Arrears - calculate from students
+                # KPI calculations removed
                 students = get_all_students()
-                total_arrears = 0
-                for student in students:
-                    balance = get_balance(student[0])  # student[0] is the ID
-                    if balance > 0:
-                        total_arrears += balance
-                self._set_kpi_value(self.kpi_arrears, f"KSh {total_arrears:,.0f}")
-                
-                # Total Contributions
-                total_contrib_result = db.fetch_one("SELECT SUM(cash_equivalent) FROM contributions")
-                total_contrib = total_contrib_result[0] if total_contrib_result and total_contrib_result[0] else 0
-                # Show contributions in header as part of greeting subtitle
-                self.header.setText(self._greeting(self.user.get('username', 'Admin')) + f"  |  Contributions: KSh {total_contrib:,.0f}")
 
-                # Total Students and Classes
-                count_students = db.fetch_one("SELECT COUNT(*) FROM students")[0]
-                count_classes = db.fetch_one("SELECT COUNT(*) FROM classes")[0]
-                self._set_kpi_value(self.kpi_students, f"{count_students}")
-                self._set_kpi_value(self.kpi_classes, f"{count_classes}")
-
-                # How many should be paid and how much received
-                fees_total = db.fetch_one("SELECT SUM(total_fees + bus_fee) FROM fees")[0]
-                paid_total = db.fetch_one("SELECT SUM(amount) FROM payments")[0]
-                fees_total = fees_total if fees_total else 0
-                paid_total = paid_total if paid_total else 0
-                remaining = fees_total - paid_total
-                # Reuse contributions in header; append school totals
-                self.header.setText(self.header.text() + f"  |  Students: {count_students}  |  Should Pay: KSh {fees_total:,.0f}  |  Received: KSh {paid_total:,.0f}  |  Arrears: KSh {remaining:,.0f}")
+                # Keep header clean
+                self.header.setText(self._greeting(self.user.get('username', 'Admin')))
                 
-                # Class-wise Arrears
-                class_arrears = db.fetch_all("""
+                # Class-wise Arrears (handle pre-migration DBs that may not have boarding_fee)
+                fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+                has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+                amount_expr = "COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0)"
+                if has_boarding:
+                    amount_expr += " + COALESCE(f.boarding_fee, 0)"
+                class_arrears = db.fetch_all(f"""
                     SELECT c.name,
                            COUNT(s.id) as num_students,
-                           SUM(COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - 
+                           SUM({amount_expr} - 
                                COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0)) as arrears
                     FROM classes c
                     LEFT JOIN students s ON c.id = s.class_id
@@ -238,13 +440,12 @@ class AdminDashboard(QWidget):
                     self.high_arrears_table.setItem(row, 2, QTableWidgetItem(class_name or ""))
                     self.high_arrears_table.setItem(row, 3, QTableWidgetItem(f"KSh {arrears:,.2f}"))
                 
-                # Logs
-                logs = db.fetch_all("SELECT user_id, action, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 10")
-                self.logs_table.setRowCount(len(logs))
-                for row, (user_id, action, timestamp) in enumerate(logs):
-                    self.logs_table.setItem(row, 0, QTableWidgetItem(str(user_id) if user_id else ""))
-                    self.logs_table.setItem(row, 1, QTableWidgetItem(action or ""))
-                    self.logs_table.setItem(row, 2, QTableWidgetItem(str(timestamp) if timestamp else ""))
+                # Logs summary (replace old table usage)
+                logs = db.fetch_all("SELECT user_id, action, timestamp FROM audit_logs ORDER BY timestamp DESC LIMIT 5")
+                summary_lines = []
+                for (user_id, action, timestamp) in logs:
+                    summary_lines.append(f"{timestamp} - User {user_id or 'N/A'}: {action}")
+                self.logs_summary.setText("\n".join(summary_lines) if summary_lines else "No recent activity.")
                 
                 self.progress_bar.setValue(100)
         except Exception as e:
@@ -313,7 +514,8 @@ class AdminDashboard(QWidget):
             value_lbl.setText(value_text)
         if change_lbl is not None and change_pct is not None:
             sign = "+" if change_pct >= 0 else ""
-            color = "#2ecc71" if change_pct >= 0 else "#e74c3c"
+            # Single-accent color for consistency
+            color = "#3498db"
             change_lbl.setText(f"{sign}{change_pct:.1f}% vs last month")
             change_lbl.setStyleSheet(f"font-size:12px; color:{color};")
         elif change_lbl is not None:
@@ -395,6 +597,62 @@ class AdminDashboard(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save term fee: {str(e)}")
 
+    def load_food_requirements(self):
+        try:
+            class_name = self.class_combo.currentText()
+            if not class_name:
+                return
+            with DBManager() as db:
+                row = db.fetch_one("SELECT id FROM classes WHERE name = ?", (class_name,))
+            if not row:
+                return
+            class_id = row[0]
+            req = get_food_requirements(class_id)
+            self.food_maize.setText(str(req.get('maize_kg', 0)))
+            self.food_beans.setText(str(req.get('beans_kg', 0)))
+            self.food_millet.setText(str(req.get('millet_kg', 0)))
+        except Exception as e:
+            logging.error(f"Failed loading food requirements: {e}")
+
+    def save_food_requirements(self):
+        try:
+            class_name = self.class_combo.currentText()
+            if not class_name:
+                QMessageBox.warning(self, "Warning", "Select a class first")
+                return
+            with DBManager() as db:
+                row = db.fetch_one("SELECT id FROM classes WHERE name = ?", (class_name,))
+            if not row:
+                QMessageBox.warning(self, "Warning", "Unknown class")
+                return
+            class_id = row[0]
+            maize = float(self.food_maize.text() or 0)
+            beans = float(self.food_beans.text() or 0)
+            millet = float(self.food_millet.text() or 0)
+            set_food_requirements(class_id, maize, beans, millet)
+            QMessageBox.information(self, "Saved", f"Saved food requirements for {class_name}")
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save food requirements: {str(e)}")
+
+    def apply_boarding_fee(self):
+        try:
+            class_name = self.class_combo.currentText()
+            if not class_name:
+                QMessageBox.warning(self, "Warning", "Select a class first")
+                return
+            with DBManager() as db:
+                row = db.fetch_one("SELECT id FROM classes WHERE name = ?", (class_name,))
+            if not row:
+                QMessageBox.warning(self, "Warning", "Unknown class")
+                return
+            class_id = row[0]
+            amount = float(self.boarding_amount.text() or 0)
+            set_boarding_fee_for_class(class_id, amount)
+            QMessageBox.information(self, "Saved", f"Applied boarding fee KSh {amount:,.2f} to {class_name}")
+            self.load_data()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to apply boarding fee: {str(e)}")
+
     def save_bus_location(self):
         try:
             name = self.bus_name.text().strip()
@@ -406,40 +664,3 @@ class AdminDashboard(QWidget):
             QMessageBox.information(self, "Saved", f"Saved bus location {name}: KSh {amount:,.2f} per term")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save bus location: {str(e)}")
-
-    def add_user(self):
-        try:
-            username, ok1 = QInputDialog.getText(self, "Add User", "Enter username:")
-            if not ok1 or not username.strip():
-                return
-            password, ok2 = QInputDialog.getText(self, "Add User", "Enter password:", QLineEdit.EchoMode.Password)
-            if not ok2 or not password:
-                return
-            role, ok3 = QInputDialog.getItem(self, "Add User", "Select role:", ["admin", "clerk"], 0, False)
-            if not ok3 or not role:
-                return
-            Auth.create_user(username.strip(), password, role)
-            self.load_users()
-            self.load_data()  # Refresh logs
-            QMessageBox.information(self, "Success", f"User {username} added")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to add user: {str(e)}")
-
-    def delete_user(self):
-        try:
-            selected = self.user_table.currentRow()
-            if selected >= 0:
-                user_id = int(self.user_table.item(selected, 0).text())
-                username = self.user_table.item(selected, 1).text()
-                reply = QMessageBox.question(self, "Confirm Delete", f"Are you sure you want to delete user '{username}'?",
-                                           QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-                if reply == QMessageBox.StandardButton.Yes:
-                    with DBManager() as db:
-                        db.execute("DELETE FROM users WHERE id = ?", (user_id,))
-                    self.load_users()
-                    self.load_data()
-                    QMessageBox.information(self, "Success", f"User '{username}' deleted")
-            else:
-                QMessageBox.warning(self, "Warning", "Please select a user to delete")
-        except Exception as e:
-            QMessageBox.critical(self, "Error", f"Failed to delete user: {str(e)}")

@@ -26,12 +26,26 @@ class ReceiptGenerator:
                 
                 pdf = FPDF()
                 pdf.add_page()
-                pdf.set_font("Arial", size=16)
                 
-                # Header
-                pdf.cell(200, 10, txt="SCHOOL MANAGEMENT SYSTEM", ln=1, align="C")
+                # School Header with branding
+                pdf.set_font("Arial", "B", 18)
+                pdf.set_text_color(39, 174, 96)  # Green color for school name
+                pdf.cell(200, 12, txt="BARSIELE SUNRISE ACADEMY", ln=1, align="C")
+                
                 pdf.set_font("Arial", size=12)
-                pdf.cell(200, 5, txt="PAYMENT RECEIPT", ln=1, align="C")
+                pdf.set_text_color(0, 0, 0)  # Black text
+                pdf.cell(200, 8, txt="P.O Box 117 LONDIANI", ln=1, align="C")
+                
+                pdf.set_font("Arial", "I", 14)
+                pdf.set_text_color(39, 174, 96)  # Green for motto
+                pdf.cell(200, 8, txt="Together we Rise", ln=1, align="C")
+                
+                pdf.set_text_color(0, 0, 0)  # Back to black
+                pdf.ln(5)
+                
+                # Receipt title
+                pdf.set_font("Arial", "B", 16)
+                pdf.cell(200, 10, txt="PAYMENT RECEIPT", ln=1, align="C")
                 pdf.ln(5)
                 
                 # Receipt details
@@ -45,15 +59,30 @@ class ReceiptGenerator:
                 pdf.ln(3)
                 
                 # Payment details
+                pdf.set_font("Arial", "B", 12)
                 pdf.cell(200, 8, txt=f"Amount Paid: KSh {payment[2]:,.2f}", ln=1)  # amount is at index 2
+                pdf.set_font("Arial", size=12)
                 pdf.cell(200, 8, txt=f"Payment Method: {payment[3]}", ln=1)  # method is at index 3
+                
+                # Add verification codes if available
+                if len(payment) > 7 and payment[7]:  # transaction_code
+                    pdf.cell(200, 8, txt=f"Transaction Code: {payment[7]}", ln=1)
+                if len(payment) > 8 and payment[8]:  # bank_reference
+                    pdf.cell(200, 8, txt=f"Bank Reference: {payment[8]}", ln=1)
+                if len(payment) > 9 and payment[9]:  # mpesa_code
+                    pdf.cell(200, 8, txt=f"M-Pesa Code: {payment[9]}", ln=1)
+                
                 pdf.cell(200, 8, txt=f"Processed by: {clerk[0] if clerk else 'Unknown'}", ln=1)
                 pdf.ln(5)
                 
-                # Footer
-                pdf.set_font("Arial", size=10)
+                # Footer with school branding
+                pdf.set_font("Arial", "B", 12)
+                pdf.set_text_color(39, 174, 96)
                 pdf.cell(200, 8, txt="Thank you for your payment!", ln=1, align="C")
+                pdf.set_font("Arial", size=10)
+                pdf.set_text_color(0, 0, 0)
                 pdf.cell(200, 8, txt="Keep this receipt for your records.", ln=1, align="C")
+                pdf.cell(200, 8, txt="Barsiele Sunrise Academy - Together we Rise", ln=1, align="C")
                 
                 # Ensure receipts directory exists
                 receipts_dir = os.path.join(os.path.dirname(__file__), '..', 'receipts')
