@@ -2,6 +2,7 @@ import csv
 import os
 from .db_manager import DBManager
 import logging
+from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -10,7 +11,7 @@ def generate_payment_summary(start_date, end_date):
     with DBManager() as db:
         try:
             payments = db.fetch_all(
-                "SELECT * FROM payments WHERE date BETWEEN %s AND %s ORDER BY date DESC",
+                "SELECT * FROM payments WHERE date BETWEEN ? AND ? ORDER BY date DESC",
                 (start_date, end_date)
             )
             filename = f"reports/payment_summary_{start_date}_{end_date}.csv"

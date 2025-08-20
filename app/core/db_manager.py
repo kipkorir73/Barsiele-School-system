@@ -2,25 +2,23 @@ import sqlite3
 from dotenv import load_dotenv
 import os
 import logging
+from pathlib import Path
 
 load_dotenv()
 
 class DBManager:
-    _instance = None
-
-    def __new__(cls):
-        if cls._instance is None:
-            cls._instance = super(DBManager, cls).__new__(cls)
-            db_type = os.getenv('DB_TYPE', 'mysql')
-            if db_type == 'sqlite':
-                db_path = os.getenv('SQLITE_PATH', 'data/school_fees.db')
-                os.makedirs(os.path.dirname(db_path), exist_ok=True)
-                cls._instance.conn = sqlite3.connect(db_path)
-                cls._instance.conn.row_factory = sqlite3.Row
-            else:
-                raise ValueError("Only SQLite is supported with current configuration")
-            cls._instance.cursor = cls._instance.conn.cursor()
-        return cls._instance
+    def __init__(self):
+        """Initialize a new database connection for each instance"""
+        db_type = os.getenv('DB_TYPE', 'sqlite')
+        if db_type == 'sqlite':
+            db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
+            # Ensure the directory exists
+            Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+            self.conn = sqlite3.connect(db_path)
+            self.conn.row_factory = sqlite3.Row
+        else:
+            raise ValueError("Only SQLite is supported with current configuration")
+        self.cursor = self.conn.cursor()
 
     def __enter__(self):
         return self
@@ -28,16 +26,18 @@ class DBManager:
     def __exit__(self, exc_type, exc_val, exc_tb):
         if exc_type is not None:
             logging.error(f"Database error: {exc_val}")
-        self.conn.commit()
+            self.conn.rollback()
+        else:
+            self.conn.commit()
         self.cursor.close()
         self.conn.close()
-        self._instance = None
 
     def execute(self, query, params=None):
         try:
             self.cursor.execute(query, params or ())
+            self.conn.commit()
         except Exception as e:
-            logging.error(f"Query execution failed: {query} - {str(e)}")
+            logging.error(f"Query execution failed: \n    {query}\n     - {str(e)}")
             raise
 
     def fetch_one(self, query, params=None):

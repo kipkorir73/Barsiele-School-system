@@ -8,11 +8,12 @@ def create_student(admission_number, name, class_id, guardian_contact, profile_p
         try:
             db.execute(
                 "INSERT INTO students (admission_number, class_id, name, guardian_contact, profile_picture, bus_location) "
-                "VALUES (%s, %s, %s, %s, %s, %s)",
+                "VALUES (?, ?, ?, ?, ?, ?)",
                 (admission_number, class_id, name, guardian_contact, profile_picture, bus_location)
             )
-            logging.info(f"Created student: {name} (ID: {db.last_id()})")
-            return db.last_id()
+            student_id = db.cursor.lastrowid  # SQLite way to get last inserted ID
+            logging.info(f"Created student: {name} (ID: {student_id})")
+            return student_id
         except Exception as e:
             logging.error(f"Error creating student {name}: {e}")
             raise
@@ -22,9 +23,9 @@ def update_student(student_id, **kwargs):
         return
     with DBManager() as db:
         try:
-            set_clause = ', '.join(f"{k} = %s" for k in kwargs)
+            set_clause = ', '.join(f"{k} = ?" for k in kwargs)
             params = list(kwargs.values()) + [student_id]
-            db.execute(f"UPDATE students SET {set_clause} WHERE id = %s", params)
+            db.execute(f"UPDATE students SET {set_clause} WHERE id = ?", params)
             logging.info(f"Updated student {student_id}")
         except Exception as e:
             logging.error(f"Error updating student {student_id}: {e}")
@@ -33,7 +34,7 @@ def update_student(student_id, **kwargs):
 def get_student(student_id):
     with DBManager() as db:
         try:
-            return db.fetch_one("SELECT * FROM students WHERE id = %s", (student_id,))
+            return db.fetch_one("SELECT * FROM students WHERE id = ?", (student_id,))
         except Exception as e:
             logging.error(f"Error fetching student {student_id}: {e}")
             raise
@@ -41,7 +42,13 @@ def get_student(student_id):
 def get_all_students():
     with DBManager() as db:
         try:
-            return db.fetch_all("SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id ORDER BY c.name, s.name")
+            return db.fetch_all("""
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+            """)
         except Exception as e:
             logging.error(f"Error fetching all students: {e}")
             raise
@@ -52,11 +59,14 @@ def search_students(query):
     with DBManager() as db:
         try:
             search_pattern = f"%{query}%"
-            return db.fetch_all(
-                "SELECT s.*, c.name as class_name FROM students s LEFT JOIN classes c ON s.class_id = c.id "
-                "WHERE s.name LIKE %s OR s.admission_number LIKE %s ORDER BY c.name, s.name",
-                (search_pattern, search_pattern)
-            )
+            return db.fetch_all("""
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                WHERE s.name LIKE ? OR s.admission_number LIKE ? 
+                ORDER BY c.name, s.name
+            """, (search_pattern, search_pattern))
         except Exception as e:
             logging.error(f"Error searching students for query '{query}': {e}")
             raise

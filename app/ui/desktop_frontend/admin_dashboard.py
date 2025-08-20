@@ -3,7 +3,8 @@ from PyQt6.QtCore import Qt
 from ...core.db_manager import DBManager
 from ...core.student_manager import get_all_students
 from ...core.student_manager import create_student, update_student, get_student
-from ...core.auth import create_user
+from ...core.auth import Auth  # Use Auth class
+from ...core.payment_manager import get_balance  # Import the missing function
 import logging
 import time
 from datetime import datetime
@@ -72,12 +73,14 @@ class AdminDashboard(QWidget):
         self.load_users()
         user_layout.addWidget(self.user_table)
         
+        user_btn_layout = QVBoxLayout()
         add_user_btn = QPushButton("Add User")
         add_user_btn.clicked.connect(self.add_user)
         delete_user_btn = QPushButton("Delete User")
         delete_user_btn.clicked.connect(self.delete_user)
-        user_layout.addWidget(add_user_btn)
-        user_layout.addWidget(delete_user_btn)
+        user_btn_layout.addWidget(add_user_btn)
+        user_btn_layout.addWidget(delete_user_btn)
+        user_layout.addLayout(user_btn_layout)
         layout.addLayout(user_layout)
         
         # Logs
@@ -99,6 +102,7 @@ class AdminDashboard(QWidget):
     def load_classes(self):
         with DBManager() as db:
             classes = db.fetch_all("SELECT name FROM classes")
+            self.class_combo.clear()
             self.class_combo.addItems([c[0] for c in classes])
 
     def load_users(self):
@@ -118,45 +122,49 @@ class AdminDashboard(QWidget):
                     time.sleep(0.1)
                 
                 # Total Paid
-                total_paid = db.fetch_one("SELECT SUM(amount) FROM payments")[0] or 0
+                total_paid_result = db.fetch_one("SELECT SUM(amount) FROM payments")
+                total_paid = total_paid_result[0] if total_paid_result and total_paid_result[0] else 0
                 self.total_paid_label.setText(f"Total Paid: KSh {total_paid:,.2f}")
                 
-                # Total Arrears
+                # Total Arrears - calculate from students
                 students = get_all_students()
-                total_arrears = sum(get_balance(s[0]) for s in students if get_balance(s[0]) > 0)
+                total_arrears = 0
+                for student in students:
+                    balance = get_balance(student[0])  # student[0] is the ID
+                    if balance > 0:
+                        total_arrears += balance
                 self.total_arrears_label.setText(f"Total Arrears: KSh {total_arrears:,.2f}")
                 
                 # Total Contributions
-                total_contrib = db.fetch_one("SELECT SUM(cash_equivalent) FROM contributions")[0] or 0
+                total_contrib_result = db.fetch_one("SELECT SUM(cash_equivalent) FROM contributions")
+                total_contrib = total_contrib_result[0] if total_contrib_result and total_contrib_result[0] else 0
                 self.total_contrib_label.setText(f"Total Contributions: KSh {total_contrib:,.2f}")
                 
                 # Class-wise Arrears
                 class_arrears = db.fetch_all("""
-                    SELECT c.name, SUM(COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - COALESCE(SUM(p.amount), 0)) as arrears
+                    SELECT c.name, 
+                           SUM(COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - 
+                               COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0)) as arrears
                     FROM classes c
                     LEFT JOIN students s ON c.id = s.class_id
                     LEFT JOIN fees f ON s.id = f.student_id
-                    LEFT JOIN payments p ON s.id = p.student_id
                     GROUP BY c.name
                 """)
                 self.class_arrears_table.setRowCount(len(class_arrears))
                 for row, (class_name, arrears) in enumerate(class_arrears):
                     self.class_arrears_table.setItem(row, 0, QTableWidgetItem(class_name or ""))
-                    self.class_arrears_table.setItem(row, 1, QTableWidgetItem(f"KSh {arrears:,.2f}" if arrears else "KSh 0.00"))
+                    arrears_value = arrears if arrears and arrears > 0 else 0
+                    self.class_arrears_table.setItem(row, 1, QTableWidgetItem(f"KSh {arrears_value:,.2f}"))
                 
                 # High Arrears Students
-                high_arrears = db.fetch_all("""
-                    SELECT s.id, s.name, c.name as class_name, (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - COALESCE(SUM(p.amount), 0)) as arrears
-                    FROM students s
-                    LEFT JOIN classes c ON s.class_id = c.id
-                    LEFT JOIN fees f ON s.id = f.student_id
-                    LEFT JOIN payments p ON s.id = p.student_id
-                    GROUP BY s.id, s.name, c.name, f.total_fees, f.bus_fee
-                    HAVING arrears > 500
-                    ORDER BY arrears DESC
-                """)
-                self.high_arrears_table.setRowCount(len(high_arrears))
-                for row, (id, name, class_name, arrears) in enumerate(high_arrears):
+                high_arrears_students = []
+                for student in students:
+                    balance = get_balance(student[0])
+                    if balance > 500:
+                        high_arrears_students.append((student[0], student[2], student[7], balance))  # id, name, class_name, balance
+                
+                self.high_arrears_table.setRowCount(len(high_arrears_students))
+                for row, (id, name, class_name, arrears) in enumerate(high_arrears_students):
                     self.high_arrears_table.setItem(row, 0, QTableWidgetItem(str(id)))
                     self.high_arrears_table.setItem(row, 1, QTableWidgetItem(name or ""))
                     self.high_arrears_table.setItem(row, 2, QTableWidgetItem(class_name or ""))
@@ -177,12 +185,13 @@ class AdminDashboard(QWidget):
 
     def add_class(self):
         try:
-            class_name = self.class_combo.currentText() or "New Class"
-            with DBManager() as db:
-                db.execute("INSERT OR IGNORE INTO classes (name) VALUES (?)", (class_name,))
-            self.load_classes()
-            self.load_data()
-            QMessageBox.information(self, "Success", f"Class {class_name} added/updated")
+            class_name, ok = QInputDialog.getText(self, "Add Class", "Enter class name:")
+            if ok and class_name.strip():
+                with DBManager() as db:
+                    db.execute("INSERT OR IGNORE INTO classes (name) VALUES (?)", (class_name.strip(),))
+                self.load_classes()
+                self.load_data()
+                QMessageBox.information(self, "Success", f"Class {class_name} added")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to add class: {str(e)}")
 
@@ -204,7 +213,7 @@ class AdminDashboard(QWidget):
     def add_user(self):
         try:
             username, ok1 = QInputDialog.getText(self, "Add User", "Enter username:")
-            if not ok1 or not username:
+            if not ok1 or not username.strip():
                 return
             password, ok2 = QInputDialog.getText(self, "Add User", "Enter password:", QLineEdit.EchoMode.Password)
             if not ok2 or not password:
@@ -212,7 +221,7 @@ class AdminDashboard(QWidget):
             role, ok3 = QInputDialog.getItem(self, "Add User", "Select role:", ["admin", "clerk"], 0, False)
             if not ok3 or not role:
                 return
-            create_user(username, password, role)
+            Auth.create_user(username.strip(), password, role)
             self.load_users()
             self.load_data()  # Refresh logs
             QMessageBox.information(self, "Success", f"User {username} added")
@@ -224,14 +233,15 @@ class AdminDashboard(QWidget):
             selected = self.user_table.currentRow()
             if selected >= 0:
                 user_id = int(self.user_table.item(selected, 0).text())
-                reply = QMessageBox.question(self, "Confirm Delete", f"Are you sure you want to delete user ID {user_id}?",
+                username = self.user_table.item(selected, 1).text()
+                reply = QMessageBox.question(self, "Confirm Delete", f"Are you sure you want to delete user '{username}'?",
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if reply == QMessageBox.StandardButton.Yes:
                     with DBManager() as db:
                         db.execute("DELETE FROM users WHERE id = ?", (user_id,))
                     self.load_users()
                     self.load_data()
-                    QMessageBox.information(self, "Success", f"User ID {user_id} deleted")
+                    QMessageBox.information(self, "Success", f"User '{username}' deleted")
             else:
                 QMessageBox.warning(self, "Warning", "Please select a user to delete")
         except Exception as e:

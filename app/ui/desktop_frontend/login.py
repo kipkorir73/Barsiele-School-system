@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QMessageBox, QLabel
 from PyQt6.QtCore import Qt
-from ...core.auth import validate_login
+from ...core.auth import validate_login  # This function needs to be added to auth.py
 import logging
 
 logging.basicConfig(filename='app/logs/login.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -85,7 +85,9 @@ class LoginWindow(QWidget):
                 QMessageBox.warning(self, "Input Error", "Please enter both username and password")
                 return
                 
-            user = validate_login(username, password)
+            # Use the Auth.authenticate method
+            from ...core.auth import Auth
+            user = Auth.authenticate(username, password)
             if user:
                 self.current_user = user
                 self.current_user['username'] = username

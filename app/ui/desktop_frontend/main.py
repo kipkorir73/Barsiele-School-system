@@ -1,6 +1,6 @@
 import sys
 from PyQt6.QtWidgets import QApplication, QMainWindow, QTabWidget, QMenuBar, QStatusBar, QProgressBar
-from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtCore import Qt, QTimer, QEvent
 from .student_tab import StudentTab
 from .payment_tab import PaymentTab
 from .report_tab import ReportTab
@@ -96,7 +96,7 @@ class MainWindow(QMainWindow):
         from PyQt6.QtWidgets import QMessageBox
         QMessageBox.about(self, "About School Management System",
                          "School Management System v1.0\n\nA comprehensive solution for managing school fees,\n"
-                         "student records, and payment tracking.\n\nDeveloped with PyQt6 and MySQL.")
+                         "student records, and payment tracking.\n\nDeveloped with PyQt6 and SQLite.")
 
     def show_help(self):
         from PyQt6.QtWidgets import QMessageBox
@@ -119,9 +119,9 @@ class MainWindow(QMainWindow):
     def check_inactivity(self):
         if (datetime.now() - self.last_activity).total_seconds() > 300:
             self.logout()
-        self.last_activity = datetime.now()
 
     def event(self, event):
-        if event.type() in (event.MouseButtonPress, event.KeyPress):
+        # Fixed: Use QEvent.Type enum values instead of accessing them from the event object
+        if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.KeyPress):
             self.last_activity = datetime.now()
         return super().event(event)

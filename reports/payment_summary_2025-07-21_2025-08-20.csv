@@ -1,0 +1,5 @@
+Payment ID,Student ID,Amount,Method,Date,Clerk ID,Receipt No
+1,1,5000.0,Cash,2025-08-19,3
+2,1,5000.0,M-pesa,2025-08-19,3
+3,1,5000.0,Cash,2025-08-19,4
+4,2,5000.0,M-Pesa,2025-08-19,2

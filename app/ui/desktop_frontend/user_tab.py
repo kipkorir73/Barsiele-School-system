@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QMessageBox, QFormLayout, QTableWidget, QTableWidgetItem
-from ...core.auth import create_user
+from ...core.auth import Auth  # Use the Auth class instead
 from ...core.db_manager import DBManager
 import logging
 
@@ -84,7 +84,7 @@ class UserTab(QWidget):
                 QMessageBox.warning(self, "Warning", "Please fill all fields")
                 return
                 
-            create_user(username, pw, role)
+            Auth.create_user(username, pw, role)  # Use Auth.create_user
             self.username.clear()
             self.password.clear()
             self.load_users()
@@ -101,7 +101,7 @@ class UserTab(QWidget):
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if reply == QMessageBox.StandardButton.Yes:
                     with DBManager() as db:
-                        db.execute("DELETE FROM users WHERE id = %s", (user_id,))
+                        db.execute("DELETE FROM users WHERE id = ?", (user_id,))
                     self.load_users()
                     QMessageBox.information(self, "Success", "User deleted successfully")
             except Exception as e:
