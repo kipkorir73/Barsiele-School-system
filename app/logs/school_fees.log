@@ -1,0 +1,115 @@
+2025-08-20 09:10:08,993 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 09:11:24,288 - INFO - Created/ensured table: users
+2025-08-20 09:11:24,289 - INFO - Created/ensured table: classes
+2025-08-20 09:11:24,289 - INFO - Created/ensured table: students
+2025-08-20 09:11:24,289 - INFO - Created/ensured table: fees
+2025-08-20 09:11:24,289 - INFO - Created/ensured table: contributions
+2025-08-20 09:11:24,290 - INFO - Created/ensured table: payments
+2025-08-20 09:11:24,290 - INFO - Created/ensured table: receipts
+2025-08-20 09:11:24,290 - INFO - Created/ensured table: audit_logs
+2025-08-20 09:11:24,291 - INFO - Database initialization completed successfully
+2025-08-20 09:11:47,881 - WARNING - Failed login attempt for user: Collins73
+2025-08-20 09:11:56,418 - WARNING - Failed login attempt for user: Collins73
+2025-08-20 09:12:07,107 - WARNING - Failed login attempt for user: Admin
+2025-08-20 09:12:16,684 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 09:12:17,045 - INFO - User logged in: admin
+2025-08-20 09:12:17,907 - INFO - Successful login for user: admin
+2025-08-20 09:12:49,794 - INFO - User created: Collins (admin)
+2025-08-20 09:14:27,960 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 09:14:27,960 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 09:14:27,960 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 09:14:49,525 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 09:14:49,525 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 09:14:49,525 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 09:15:31,759 - INFO - Created student: Collins Kipkorir (ID: 2)
+2025-08-20 09:15:31,785 - INFO - Fee set for student 2: 5800.0, Bus: 0.0
+2025-08-20 09:15:55,309 - INFO - Updated contribution rates: {'maize': 30.0, 'millet': 40.0, 'beans': 25.0}
+2025-08-20 09:17:20,361 - WARNING - Failed login attempt for user: clerk
+2025-08-20 09:17:35,047 - INFO - User logged in: Collins
+2025-08-20 09:17:35,960 - INFO - Successful login for user: Collins
+2025-08-20 09:18:05,573 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_d26db22f.pdf
+2025-08-20 09:19:20,459 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 09:19:20,459 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 09:19:20,459 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 09:20:11,852 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_413a491c.pdf
+2025-08-20 09:20:42,681 - INFO - Generated payment summary: reports/payment_summary_2025-07-21_2025-08-20.csv
+2025-08-20 09:20:42,682 - ERROR - Fetch all failed: SELECT * FROM payments WHERE date BETWEEN %s AND %s - near "%": syntax error
+2025-08-20 09:20:42,682 - ERROR - Database error: near "%": syntax error
+2025-08-20 09:21:19,119 - ERROR - Query execution failed: 
+    INSERT INTO users (username, password, role) VALUES (?, ?, ?)
+     - UNIQUE constraint failed: users.username
+2025-08-20 09:21:19,119 - ERROR - User creation failed: UNIQUE constraint failed: users.username
+2025-08-20 09:21:19,119 - ERROR - Database error: UNIQUE constraint failed: users.username
+2025-08-20 09:53:07,221 - INFO - Created/ensured table: users
+2025-08-20 09:53:07,222 - INFO - Created/ensured table: classes
+2025-08-20 09:53:07,223 - INFO - Created/ensured table: students
+2025-08-20 09:53:07,223 - INFO - Created/ensured table: fees
+2025-08-20 09:53:07,224 - INFO - Created/ensured table: contributions
+2025-08-20 09:53:07,224 - INFO - Created/ensured table: payments
+2025-08-20 09:53:07,224 - INFO - Created/ensured table: receipts
+2025-08-20 09:53:07,225 - INFO - Created/ensured table: audit_logs
+2025-08-20 09:53:07,228 - INFO - Database initialization completed successfully
+2025-08-20 09:53:24,787 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 09:53:25,179 - INFO - User logged in: admin
+2025-08-20 09:53:26,267 - INFO - Successful login for user: admin
+2025-08-20 09:53:50,000 - INFO - User created: clerk (clerk)
+2025-08-20 09:54:10,785 - INFO - User logged in: clerk
+2025-08-20 09:54:10,847 - INFO - Successful login for user: clerk
+2025-08-20 09:55:20,876 - INFO - Receipt generated: C:\Users\ADMIN\Downloads\school_fee_system_starter\app\core\..\receipts\receipt_c7be1227.pdf
+2025-08-20 09:56:46,539 - INFO - Updated student 2
+2025-08-20 09:56:46,573 - INFO - Fee set for student 2: 120000.0, Bus: 0.0
+2025-08-20 10:12:09,159 - INFO - Created/ensured table: users
+2025-08-20 10:12:09,160 - INFO - Created/ensured table: classes
+2025-08-20 10:12:09,160 - INFO - Created/ensured table: students
+2025-08-20 10:12:09,160 - INFO - Created/ensured table: fees
+2025-08-20 10:12:09,161 - INFO - Created/ensured table: contributions
+2025-08-20 10:12:09,161 - INFO - Created/ensured table: payments
+2025-08-20 10:12:09,161 - INFO - Created/ensured table: receipts
+2025-08-20 10:12:09,161 - INFO - Created/ensured table: audit_logs
+2025-08-20 10:12:09,162 - INFO - Database initialization completed successfully
+2025-08-20 10:12:25,069 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 10:12:25,461 - INFO - User logged in: admin
+2025-08-20 10:12:26,593 - INFO - Successful login for user: admin
+2025-08-20 10:16:34,982 - INFO - Created/ensured table: users
+2025-08-20 10:16:34,983 - INFO - Created/ensured table: classes
+2025-08-20 10:16:34,983 - INFO - Created/ensured table: students
+2025-08-20 10:16:34,983 - INFO - Created/ensured table: fees
+2025-08-20 10:16:34,983 - INFO - Created/ensured table: contributions
+2025-08-20 10:16:34,984 - INFO - Created/ensured table: payments
+2025-08-20 10:16:34,984 - INFO - Created/ensured table: receipts
+2025-08-20 10:16:34,984 - INFO - Created/ensured table: audit_logs
+2025-08-20 10:16:34,985 - INFO - Database initialization completed successfully
+2025-08-20 10:16:47,398 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 10:16:47,763 - INFO - User logged in: admin
+2025-08-20 10:16:49,282 - INFO - Successful login for user: admin

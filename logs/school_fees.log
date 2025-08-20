@@ -407,3 +407,85 @@ AttributeError: module 'bcrypt' has no attribute '__about__'
 2025-08-20 08:43:24,578 - ERROR - Database error: no such column: s.class_id
 2025-08-20 08:43:24,579 - ERROR - Error loading dashboard data: no such column: s.class_id
 2025-08-20 08:43:26,294 - INFO - Successful login for user: Admin
+2025-08-20 08:50:39,633 - INFO - Created/ensured table: users
+2025-08-20 08:50:39,634 - INFO - Created/ensured table: classes
+2025-08-20 08:50:39,634 - INFO - Created/ensured table: students
+2025-08-20 08:50:39,634 - INFO - Created/ensured table: fees
+2025-08-20 08:50:39,634 - INFO - Created/ensured table: contributions
+2025-08-20 08:50:39,635 - INFO - Created/ensured table: payments
+2025-08-20 08:50:39,635 - INFO - Created/ensured table: receipts
+2025-08-20 08:50:39,635 - INFO - Created/ensured table: audit_logs
+2025-08-20 08:50:39,636 - INFO - Database initialization completed successfully
+2025-08-20 08:50:56,494 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 08:50:56,836 - INFO - User logged in: Collins73
+2025-08-20 08:50:56,851 - ERROR - Fetch all failed: 
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+             - no such column: s.class_id
+2025-08-20 08:50:56,851 - ERROR - Error fetching all students: no such column: s.class_id
+2025-08-20 08:50:56,851 - ERROR - Database error: no such column: s.class_id
+2025-08-20 08:51:18,207 - ERROR - Fetch all failed: 
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+             - no such column: s.class_id
+2025-08-20 08:51:18,207 - ERROR - Error fetching all students: no such column: s.class_id
+2025-08-20 08:51:18,207 - ERROR - Database error: no such column: s.class_id
+2025-08-20 09:02:28,714 - INFO - Created/ensured table: users
+2025-08-20 09:02:28,714 - INFO - Created/ensured table: classes
+2025-08-20 09:02:28,714 - INFO - Created/ensured table: students
+2025-08-20 09:02:28,714 - INFO - Created/ensured table: fees
+2025-08-20 09:02:28,715 - INFO - Created/ensured table: contributions
+2025-08-20 09:02:28,715 - INFO - Created/ensured table: payments
+2025-08-20 09:02:28,715 - INFO - Created/ensured table: receipts
+2025-08-20 09:02:28,715 - INFO - Created/ensured table: audit_logs
+2025-08-20 09:02:28,716 - INFO - Database initialization completed successfully
+2025-08-20 09:03:12,850 - WARNING - Failed login attempt for user: clerk
+2025-08-20 09:03:27,971 - WARNING - (trapped) error reading bcrypt version
+Traceback (most recent call last):
+  File "C:\Users\ADMIN\AppData\Local\Programs\Python\Python313\Lib\site-packages\passlib\handlers\bcrypt.py", line 620, in _load_backend_mixin
+    version = _bcrypt.__about__.__version__
+              ^^^^^^^^^^^^^^^^^
+AttributeError: module 'bcrypt' has no attribute '__about__'
+2025-08-20 09:03:28,326 - INFO - User logged in: Collins73
+2025-08-20 09:03:28,349 - ERROR - Fetch all failed: 
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+             - no such column: s.class_id
+2025-08-20 09:03:28,349 - ERROR - Error fetching all students: no such column: s.class_id
+2025-08-20 09:03:28,349 - ERROR - Database error: no such column: s.class_id
+2025-08-20 09:03:33,048 - ERROR - Fetch all failed: 
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+             - no such column: s.class_id
+2025-08-20 09:03:33,049 - ERROR - Error fetching all students: no such column: s.class_id
+2025-08-20 09:03:33,049 - ERROR - Database error: no such column: s.class_id
+2025-08-20 09:03:34,327 - INFO - Successful login for user: Collins73
+2025-08-20 09:07:06,783 - ERROR - Fetch all failed: 
+                SELECT s.id, s.admission_number, s.name, s.class_id, s.guardian_contact, 
+                       s.profile_picture, s.bus_location, COALESCE(c.name, 'No Class') as class_name 
+                FROM students s 
+                LEFT JOIN classes c ON s.class_id = c.id 
+                ORDER BY c.name, s.name
+             - no such table: students
+2025-08-20 09:07:06,783 - ERROR - Error fetching all students: no such table: students
+2025-08-20 09:07:06,783 - ERROR - Database error: no such table: students
+2025-08-20 09:52:49,231 - ERROR - Fetch all failed: SELECT * FROM payments ORDER BY date DESC LIMIT 10 - no such table: payments
+2025-08-20 09:52:49,234 - ERROR - Database error: no such table: payments
+2025-08-20 09:52:50,572 - INFO - Successful login for user: Collins73
