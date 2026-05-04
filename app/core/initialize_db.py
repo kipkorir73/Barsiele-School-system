@@ -11,7 +11,8 @@ def init_db():
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     
-    # If database file exists and is locked, try to handle it
+    # If the database is temporarily locked, wait and let the retry loop below
+    # handle it. Never remove the database file; it contains production data.
     if os.path.exists(db_path):
         try:
             # Test if we can access the database
@@ -21,11 +22,7 @@ def init_db():
             if "database is locked" in str(e).lower():
                 print("Database is locked. Waiting for it to be released...")
                 time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
+                logging.warning("Database is locked during initialization; retrying without deleting it")
     
     max_retries = 3
     for attempt in range(max_retries):
