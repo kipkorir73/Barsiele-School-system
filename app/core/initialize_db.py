@@ -9,23 +9,23 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def init_db():
     # Ensure the data directory exists
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     
-    # If database file exists and is locked, try to handle it
+    # If the database file exists, verify it can be opened before running migrations.
+    # A locked database must never be removed; retry below and fail safely if it stays locked.
     if os.path.exists(db_path):
         try:
-            # Test if we can access the database
             with DBManager() as db:
                 db.execute("SELECT 1")
         except Exception as e:
             if "database is locked" in str(e).lower():
+                logging.warning("Database is locked; initialization will retry without deleting the database file")
                 print("Database is locked. Waiting for it to be released...")
                 time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
+            else:
+                raise
     
     max_retries = 3
     for attempt in range(max_retries):
