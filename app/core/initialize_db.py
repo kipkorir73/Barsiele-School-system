@@ -20,12 +20,10 @@ def init_db():
         except Exception as e:
             if "database is locked" in str(e).lower():
                 print("Database is locked. Waiting for it to be released...")
+                logging.warning("Database is locked during initialization; retrying without deleting the database file")
                 time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
+            else:
+                raise
     
     max_retries = 3
     for attempt in range(max_retries):
