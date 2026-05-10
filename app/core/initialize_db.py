@@ -6,6 +6,9 @@ import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def _is_database_locked_error(error):
+    return "database is locked" in str(error).lower()
+
 def init_db():
     # Ensure the data directory exists
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
@@ -18,14 +21,9 @@ def init_db():
             with DBManager() as db:
                 db.execute("SELECT 1")
         except Exception as e:
-            if "database is locked" in str(e).lower():
+            if _is_database_locked_error(e):
                 print("Database is locked. Waiting for it to be released...")
                 time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
     
     max_retries = 3
     for attempt in range(max_retries):
@@ -48,6 +46,8 @@ def init_db():
             logging.error(f"Database initialization error (attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 raise
+            if _is_database_locked_error(e):
+                print("Database is locked. Retrying without deleting the existing database...")
             time.sleep(1)
 
 def ensure_initial_data(db):
