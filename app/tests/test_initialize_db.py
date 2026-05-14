@@ -4,6 +4,8 @@ import unittest
 from unittest.mock import patch
 
 from app.core import initialize_db
+from app.core.auth import Auth
+from app.core.db_manager import DBManager
 
 
 class TestInitializeDb(unittest.TestCase):
@@ -23,6 +25,26 @@ class TestInitializeDb(unittest.TestCase):
             self.assertTrue(os.path.exists(db_path))
             with open(db_path, "rb") as db_file:
                 self.assertEqual(db_file.read(), original_contents)
+
+    def test_fresh_database_gets_default_login_and_classes(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            db_path = os.path.join(temp_dir, "school_fees.db")
+
+            with patch.dict(os.environ, {"SQLITE_PATH": db_path}):
+                initialize_db.init_db()
+
+                with DBManager() as db:
+                    user = db.fetch_one(
+                        "SELECT username, email, role FROM users WHERE username = ?",
+                        ("admin",),
+                    )
+                    class_count = db.fetch_one("SELECT COUNT(*) FROM classes")[0]
+
+                self.assertIsNotNone(user)
+                self.assertEqual(user["email"], "admin@barsiele.ac.ke")
+                self.assertEqual(user["role"], "admin")
+                self.assertEqual(class_count, 8)
+                self.assertIsNotNone(Auth.authenticate("admin", "admin123"))
 
 
 if __name__ == "__main__":
