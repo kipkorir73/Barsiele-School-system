@@ -11,22 +11,6 @@ def init_db():
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     
-    # If database file exists and is locked, try to handle it
-    if os.path.exists(db_path):
-        try:
-            # Test if we can access the database
-            with DBManager() as db:
-                db.execute("SELECT 1")
-        except Exception as e:
-            if "database is locked" in str(e).lower():
-                print("Database is locked. Waiting for it to be released...")
-                time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
-    
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -48,6 +32,8 @@ def init_db():
             logging.error(f"Database initialization error (attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 raise
+            if "database is locked" in str(e).lower():
+                print("Database is locked. Waiting for it to be released...")
             time.sleep(1)
 
 def ensure_initial_data(db):
