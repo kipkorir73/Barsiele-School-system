@@ -6,10 +6,51 @@ import time
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def _is_locked_error(error):
+    return "database is locked" in str(error).lower()
+
+def _table_exists(db, table_name):
+    row = db.fetch_one("SELECT name FROM sqlite_master WHERE type='table' AND name = ?", (table_name,))
+    return row is not None
+
+def _column_names(db, table_name):
+    if not _table_exists(db, table_name):
+        return set()
+    return {column[1] for column in db.fetch_all(f"PRAGMA table_info({table_name})")}
+
+def _add_column_if_missing(db, table_name, column_name, column_sql):
+    columns = _column_names(db, table_name)
+    if column_name not in columns:
+        db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
+        logging.info(f"Added missing column {table_name}.{column_name}")
+
+def ensure_schema_migrations(db):
+    """Apply safe additive migrations for databases created by older app versions."""
+    if _table_exists(db, "users"):
+        _add_column_if_missing(db, "users", "email", "email TEXT")
+        db.execute("UPDATE users SET email = username || '@barsiele.ac.ke' WHERE email IS NULL OR email = ''")
+        _add_column_if_missing(db, "users", "created_at", "created_at TEXT")
+        db.execute("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL OR created_at = ''")
+
+    if _table_exists(db, "fees"):
+        _add_column_if_missing(db, "fees", "boarding_fee", "boarding_fee REAL NOT NULL DEFAULT 0.0")
+
+    if _table_exists(db, "payments"):
+        _add_column_if_missing(db, "payments", "transaction_code", "transaction_code TEXT")
+        _add_column_if_missing(db, "payments", "bank_reference", "bank_reference TEXT")
+        _add_column_if_missing(db, "payments", "mpesa_code", "mpesa_code TEXT")
+        _add_column_if_missing(db, "payments", "verified", "verified BOOLEAN DEFAULT 0")
+
+    if _table_exists(db, "audit_logs"):
+        _add_column_if_missing(db, "audit_logs", "ip_address", "ip_address TEXT")
+        _add_column_if_missing(db, "audit_logs", "user_agent", "user_agent TEXT")
+
 def init_db():
     # Ensure the data directory exists
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
-    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    db_dir = os.path.dirname(db_path)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     
     # If database file exists and is locked, try to handle it
     if os.path.exists(db_path):
@@ -18,14 +59,11 @@ def init_db():
             with DBManager() as db:
                 db.execute("SELECT 1")
         except Exception as e:
-            if "database is locked" in str(e).lower():
-                print("Database is locked. Waiting for it to be released...")
+            if _is_locked_error(e):
+                logging.warning("Database is locked during startup check; will retry without deleting it")
                 time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
+            else:
+                raise
     
     max_retries = 3
     for attempt in range(max_retries):
@@ -36,6 +74,8 @@ def init_db():
                     # Extract table name for logging
                     table_name = table_sql.split()[5] if len(table_sql.split()) > 5 else "unknown"
                     logging.info(f"Created/ensured table: {table_name}")
+
+                ensure_schema_migrations(db)
                 
                 # Add some initial data if tables are empty
                 ensure_initial_data(db)
@@ -48,6 +88,8 @@ def init_db():
             logging.error(f"Database initialization error (attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 raise
+            if _is_locked_error(e):
+                logging.warning("Database is locked during initialization; retrying without deleting it")
             time.sleep(1)
 
 def ensure_initial_data(db):

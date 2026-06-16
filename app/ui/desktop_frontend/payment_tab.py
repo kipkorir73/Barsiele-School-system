@@ -6,6 +6,8 @@ from ...core.receipt_generator import generate_receipt
 from ...core.config import DEFAULT_RATES
 import logging
 import os
+import subprocess
+import sys
 from ...core.db_manager import DBManager
 
 logging.basicConfig(filename='app/logs/payment.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -125,6 +127,24 @@ class PaymentTab(QWidget):
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load students: {str(e)}")
 
+    def open_receipt_file(self, receipt_file):
+        try:
+            if hasattr(os, "startfile"):
+                os.startfile(receipt_file)
+            elif sys.platform == "darwin":
+                subprocess.Popen(["open", receipt_file])
+            else:
+                subprocess.Popen(["xdg-open", receipt_file])
+            return True
+        except Exception as e:
+            logging.error(f"Could not open receipt {receipt_file}: {e}")
+            QMessageBox.warning(
+                self,
+                "Open Receipt",
+                f"Receipt saved to {receipt_file}, but it could not be opened automatically: {e}"
+            )
+            return False
+
     def update_balance(self):
         try:
             student_id = self.student_combo.currentData()
@@ -202,7 +222,7 @@ class PaymentTab(QWidget):
                 QMessageBox.information(self, "Receipt", f"Receipt generated: {receipt_file}\nOpen it?")
                 if QMessageBox.question(self, "Open Receipt", "Open the receipt now?", 
                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
-                    os.startfile(receipt_file)
+                    self.open_receipt_file(receipt_file)
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to record payment: {str(e)}")
 
@@ -257,8 +277,8 @@ class PaymentTab(QWidget):
                 with DBManager() as db:
                     receipt = db.fetch_one("SELECT filename FROM receipts WHERE payment_id = ? AND receipt_no = ?", (payment_id, receipt_no))
                     if receipt and receipt[0]:
-                        os.startfile(receipt[0])  # Opens the PDF
-                        QMessageBox.information(self, "Success", f"Printing receipt: {receipt[0]}")
+                        if self.open_receipt_file(receipt[0]):
+                            QMessageBox.information(self, "Success", f"Printing receipt: {receipt[0]}")
                     else:
                         QMessageBox.warning(self, "Warning", "Receipt not found. Generate it first.")
             else:
