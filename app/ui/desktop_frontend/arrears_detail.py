@@ -84,12 +84,16 @@ class ArrearsDetailDialog(QDialog):
     def load_data(self):
         try:
             with DBManager() as db:
+                fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+                has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+                boarding_expr = "COALESCE(f.boarding_fee, 0)" if has_boarding else "0"
                 if self.class_name:
                     # Get students from specific class
-                    students = db.fetch_all("""
+                    students = db.fetch_all(f"""
                         SELECT s.admission_number, s.name, c.name as class_name, s.id,
                                COALESCE(f.total_fees, 0) as total_fees,
-                               COALESCE(f.bus_fee, 0) as bus_fee
+                               COALESCE(f.bus_fee, 0) as bus_fee,
+                               {boarding_expr} as boarding_fee
                         FROM students s
                         JOIN classes c ON s.class_id = c.id
                         LEFT JOIN fees f ON s.id = f.student_id
@@ -98,10 +102,11 @@ class ArrearsDetailDialog(QDialog):
                     """, (self.class_name,))
                 else:
                     # Get all students with arrears > 0
-                    students = db.fetch_all("""
+                    students = db.fetch_all(f"""
                         SELECT s.admission_number, s.name, c.name as class_name, s.id,
                                COALESCE(f.total_fees, 0) as total_fees,
-                               COALESCE(f.bus_fee, 0) as bus_fee
+                               COALESCE(f.bus_fee, 0) as bus_fee,
+                               {boarding_expr} as boarding_fee
                         FROM students s
                         JOIN classes c ON s.class_id = c.id
                         LEFT JOIN fees f ON s.id = f.student_id
@@ -115,13 +120,13 @@ class ArrearsDetailDialog(QDialog):
                 total_paid = 0
                 
                 for student in students:
-                    admission_no, name, class_name, student_id, fees, bus_fee = student
+                    admission_no, name, class_name, student_id, fees, bus_fee, boarding_fee = student
                     
                     # Get payments for this student
                     paid_result = db.fetch_one("SELECT SUM(amount) FROM payments WHERE student_id = ?", (student_id,))
                     paid = paid_result[0] if paid_result and paid_result[0] else 0
                     
-                    total_expected = fees + bus_fee
+                    total_expected = fees + bus_fee + boarding_fee
                     arrears = total_expected - paid
                     
                     # Only include students with arrears > 0 if showing all classes
@@ -300,11 +305,15 @@ class HighArrearsDialog(QDialog):
     def load_data(self):
         try:
             with DBManager() as db:
+                fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+                has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+                boarding_expr = "COALESCE(f.boarding_fee, 0)" if has_boarding else "0"
                 # Get all students with high arrears (> 1000)
-                students = db.fetch_all("""
+                students = db.fetch_all(f"""
                     SELECT s.admission_number, s.name, c.name as class_name, s.guardian_contact, s.id,
                            COALESCE(f.total_fees, 0) as total_fees,
-                           COALESCE(f.bus_fee, 0) as bus_fee
+                           COALESCE(f.bus_fee, 0) as bus_fee,
+                           {boarding_expr} as boarding_fee
                     FROM students s
                     JOIN classes c ON s.class_id = c.id
                     LEFT JOIN fees f ON s.id = f.student_id
@@ -315,13 +324,13 @@ class HighArrearsDialog(QDialog):
                 total_high_arrears = 0
                 
                 for student in students:
-                    admission_no, name, class_name, guardian_contact, student_id, fees, bus_fee = student
+                    admission_no, name, class_name, guardian_contact, student_id, fees, bus_fee, boarding_fee = student
                     
                     # Get payments for this student
                     paid_result = db.fetch_one("SELECT SUM(amount) FROM payments WHERE student_id = ?", (student_id,))
                     paid = paid_result[0] if paid_result and paid_result[0] else 0
                     
-                    total_expected = fees + bus_fee
+                    total_expected = fees + bus_fee + boarding_fee
                     arrears = total_expected - paid
                     
                     # Only include students with arrears > 1000
