@@ -4,8 +4,6 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from passlib.hash import bcrypt
-
 from app.core.auth import Auth
 from app.core.initialize_db import init_db
 
@@ -64,7 +62,7 @@ class TestInitializeDb(unittest.TestCase):
             )
             conn.execute(
                 "INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
-                ("admin", bcrypt.hash("secret"), "admin")
+                ("admin", Auth.hash_password("secret"), "admin")
             )
             conn.execute(
                 """

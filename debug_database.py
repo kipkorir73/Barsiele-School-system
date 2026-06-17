@@ -197,8 +197,8 @@ def debug_database():
         # Add default data
         print("   📋 Adding default admin user...")
         try:
-            from passlib.hash import bcrypt
-            admin_password = bcrypt.hash("admin123")
+            import bcrypt
+            admin_password = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         except ImportError:
             admin_password = "admin123"
         
