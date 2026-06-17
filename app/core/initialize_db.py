@@ -3,6 +3,7 @@ from .models import tables
 import logging
 import os
 import time
+import sqlite3
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -10,23 +11,7 @@ def init_db():
     # Ensure the data directory exists
     db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
-    
-    # If database file exists and is locked, try to handle it
-    if os.path.exists(db_path):
-        try:
-            # Test if we can access the database
-            with DBManager() as db:
-                db.execute("SELECT 1")
-        except Exception as e:
-            if "database is locked" in str(e).lower():
-                print("Database is locked. Waiting for it to be released...")
-                time.sleep(2)
-                try:
-                    os.remove(db_path)
-                    print("Removed locked database file. Creating new one...")
-                except:
-                    pass
-    
+
     max_retries = 3
     for attempt in range(max_retries):
         try:
@@ -36,19 +21,70 @@ def init_db():
                     # Extract table name for logging
                     table_name = table_sql.split()[5] if len(table_sql.split()) > 5 else "unknown"
                     logging.info(f"Created/ensured table: {table_name}")
-                
+
+                ensure_schema_migrations(db)
+
                 # Add some initial data if tables are empty
                 ensure_initial_data(db)
-                
+
             print("Database initialized successfully.")
             logging.info("Database initialization completed successfully")
             return
-            
+
         except Exception as e:
+            if _is_locked_error(e):
+                logging.warning("Database is locked during initialization; retrying without deleting the database")
             logging.error(f"Database initialization error (attempt {attempt + 1}): {e}")
             if attempt == max_retries - 1:
                 raise
             time.sleep(1)
+
+def _is_locked_error(error):
+    return "database is locked" in str(error).lower()
+
+def _table_exists(db, table_name):
+    result = db.fetch_one(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?",
+        (table_name,)
+    )
+    return result is not None
+
+def _column_names(db, table_name):
+    return {column[1] for column in db.fetch_all(f"PRAGMA table_info({table_name})")}
+
+def _add_column_if_missing(db, table_name, column_name, column_sql):
+    if _table_exists(db, table_name) and column_name not in _column_names(db, table_name):
+        db.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_sql}")
+        logging.info(f"Added missing column {table_name}.{column_name}")
+
+def ensure_schema_migrations(db):
+    """Apply safe in-place migrations needed by current code paths."""
+    try:
+        if _table_exists(db, "users"):
+            user_columns = _column_names(db, "users")
+            if "email" not in user_columns:
+                db.execute("ALTER TABLE users ADD COLUMN email TEXT")
+                db.execute("UPDATE users SET email = username || '@barsiele.ac.ke' WHERE email IS NULL OR email = ''")
+                logging.info("Added missing users.email column")
+            elif "email" in user_columns:
+                db.execute("UPDATE users SET email = username || '@barsiele.ac.ke' WHERE email IS NULL OR email = ''")
+
+            if "created_at" not in _column_names(db, "users"):
+                db.execute("ALTER TABLE users ADD COLUMN created_at TEXT")
+                db.execute("UPDATE users SET created_at = CURRENT_TIMESTAMP WHERE created_at IS NULL")
+                logging.info("Added missing users.created_at column")
+
+        _add_column_if_missing(db, "payments", "transaction_code", "transaction_code TEXT")
+        _add_column_if_missing(db, "payments", "bank_reference", "bank_reference TEXT")
+        _add_column_if_missing(db, "payments", "mpesa_code", "mpesa_code TEXT")
+        _add_column_if_missing(db, "payments", "verified", "verified BOOLEAN DEFAULT 0")
+        _add_column_if_missing(db, "fees", "boarding_fee", "boarding_fee REAL NOT NULL DEFAULT 0.0")
+        _add_column_if_missing(db, "audit_logs", "ip_address", "ip_address TEXT")
+        _add_column_if_missing(db, "audit_logs", "user_agent", "user_agent TEXT")
+    except sqlite3.OperationalError as e:
+        if _is_locked_error(e):
+            logging.warning("Database is locked during schema migration; retrying without deleting the database")
+        raise
 
 def ensure_initial_data(db):
     """Add initial data if tables are empty"""

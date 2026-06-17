@@ -135,8 +135,8 @@ def complete_database_fix():
         
         # Create admin user with hashed password
         try:
-            from passlib.hash import bcrypt
-            admin_password = bcrypt.hash("admin123")
+            import bcrypt
+            admin_password = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
             print("   ✅ Using bcrypt for password hashing")
         except ImportError:
             admin_password = "admin123"  # Fallback
@@ -148,7 +148,7 @@ def complete_database_fix():
         
         # Create test clerk user
         try:
-            clerk_password = bcrypt.hash("clerk123") if 'bcrypt' in locals() else "clerk123"
+            clerk_password = bcrypt.hashpw("clerk123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8") if 'bcrypt' in locals() else "clerk123"
             cursor.execute("INSERT INTO users (username, password, role) VALUES (?, ?, ?)",
                           ("clerk1", clerk_password, "clerk"))
             print("   ✅ Created clerk user (clerk1/clerk123)")

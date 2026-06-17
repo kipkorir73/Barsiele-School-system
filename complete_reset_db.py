@@ -133,10 +133,10 @@ def complete_reset():
         
         # Hash the password properly
         try:
-            from passlib.hash import bcrypt
-            hashed_password = bcrypt.hash("admin123")
+            import bcrypt
+            hashed_password = bcrypt.hashpw("admin123".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
         except:
-            # Fallback if passlib not available
+            # Fallback if bcrypt is not available
             hashed_password = "admin123"
         
         # Insert default admin user
