@@ -12,7 +12,7 @@ sys.path.insert(0, str(project_root))
 def check_dependencies():
     try:
         import PyQt6
-        import passlib
+        import bcrypt
         import fpdf
         from dotenv import load_dotenv
         load_dotenv()

@@ -12,10 +12,12 @@ class DBManager:
         db_type = os.getenv('DB_TYPE', 'sqlite')
         if db_type == 'sqlite':
             db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
+            sqlite_timeout = float(os.getenv('SQLITE_TIMEOUT', '5'))
             # Ensure the directory exists
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
-            self.conn = sqlite3.connect(db_path)
+            self.conn = sqlite3.connect(db_path, timeout=sqlite_timeout)
             self.conn.row_factory = sqlite3.Row
+            self.conn.execute(f"PRAGMA busy_timeout = {int(sqlite_timeout * 1000)}")
         else:
             raise ValueError("Only SQLite is supported with current configuration")
         self.cursor = self.conn.cursor()

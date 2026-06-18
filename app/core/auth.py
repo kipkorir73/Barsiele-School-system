@@ -1,4 +1,4 @@
-from passlib.hash import bcrypt
+import bcrypt
 from ..core.db_manager import DBManager
 import logging
 
@@ -7,14 +7,20 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class Auth:
     @staticmethod
     def hash_password(password):
-        return bcrypt.hash(password)
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     @staticmethod
     def verify_password(password, hashed):
-        return bcrypt.verify(password, hashed)
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+        except ValueError:
+            return False
 
     @staticmethod
-    def create_user(username, email, password, role):
+    def create_user(username, email, password=None, role=None):
+        if role is None:
+            password, role = email, password
+            email = f"{username}@barsiele.ac.ke"
         hashed_password = Auth.hash_password(password)
         with DBManager() as db:
             try:
@@ -37,7 +43,7 @@ class Auth:
             return None
 
 # Convenience functions for backward compatibility
-def create_user(username, email, password, role):
+def create_user(username, email, password=None, role=None):
     return Auth.create_user(username, email, password, role)
 
 def validate_login(identifier, password):
