@@ -171,6 +171,18 @@ class TestInitializeDb(unittest.TestCase):
             paid.close()
         self.assertEqual(payment, ("TXN-001", 1))
 
+    def test_fresh_database_creates_loginable_admin(self):
+        from app.core.auth import Auth
+        from app.core.initialize_db import init_db
+
+        init_db()
+
+        admin = Auth.authenticate("admin", "admin123")
+        self.assertIsNotNone(admin)
+        self.assertEqual(admin["username"], "admin")
+        self.assertEqual(admin["email"], "admin@barsiele.ac.ke")
+        self.assertFalse(Auth.authenticate("admin", "wrong-password"))
+
 
 if __name__ == "__main__":
     unittest.main()
