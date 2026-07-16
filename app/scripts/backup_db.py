@@ -1,27 +1,37 @@
-import shutil
 import os
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 import logging
+from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+load_dotenv()
 
 def backup():
     try:
-        backup_dir = "backups"
-        os.makedirs(backup_dir, exist_ok=True)
-        db_path = "data/school_fees.db"  # Adjust for MySQL if needed
-        if not os.path.exists(db_path):
+        backup_dir = Path("backups")
+        backup_dir.mkdir(parents=True, exist_ok=True)
+        db_path = Path(os.getenv('SQLITE_PATH', 'app/data/school_fees.db'))
+        if not db_path.is_file():
             logging.warning("Database file not found. Please initialize the database first.")
             print("Database file not found. Please initialize the database first.")
             return
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_filename = f'school_fees_backup_{timestamp}.db'
-        backup_path = os.path.join(backup_dir, backup_filename)
-        shutil.copy2(db_path, backup_path)
+        backup_path = backup_dir / backup_filename
+
+        # SQLite's backup API creates a consistent snapshot even if another
+        # connection is writing to the live database.
+        source_uri = f"{db_path.resolve().as_uri()}?mode=ro"
+        with sqlite3.connect(source_uri, uri=True) as source:
+            with sqlite3.connect(backup_path) as destination:
+                source.backup(destination)
+
         logging.info(f"Backup created successfully: {backup_path}")
         print(f"Backup created successfully: {backup_path}")
         cleanup_old_backups(backup_dir)
+        return str(backup_path)
     except Exception as e:
         logging.error(f"Backup failed: {e}")
         print(f"Backup failed: {e}")
