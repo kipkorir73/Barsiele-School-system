@@ -492,7 +492,9 @@ class StudentProfileDialog(QDialog):
         fee_layout = QFormLayout()
         fee_layout.addRow("Total Fee:", QLabel(f"KSh {total_fee['total_fees']:,.2f}"))
         fee_layout.addRow("Bus Fee:", QLabel(f"KSh {total_fee['bus_fee']:,.2f}"))
-        total_paid = total_fee['total_fees'] + total_fee['bus_fee'] - balance
+        boarding_fee = total_fee.get('boarding_fee', 0)
+        fee_layout.addRow("Boarding Fee:", QLabel(f"KSh {boarding_fee:,.2f}"))
+        total_paid = total_fee['total_fees'] + total_fee['bus_fee'] + boarding_fee - balance
         fee_layout.addRow("Total Paid:", QLabel(f"KSh {total_paid:,.2f}"))
         fee_layout.addRow("Balance:", QLabel(f"KSh {balance:,.2f}"))
         layout.addLayout(fee_layout)

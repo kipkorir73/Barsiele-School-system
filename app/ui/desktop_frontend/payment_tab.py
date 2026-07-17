@@ -225,6 +225,7 @@ class PaymentTab(QWidget):
             QMessageBox.information(self, "Saved", f"Contribution recorded: {item} {qty} kg (KSh {cash_equiv:,.2f})")
             self.contrib_qty.setValue(0)
             self.load_contributions()
+            self.update_balance()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to record contribution: {str(e)}")
 

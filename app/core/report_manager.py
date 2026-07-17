@@ -6,6 +6,28 @@ from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def _fees_has_boarding_fee(db):
+    columns = db.fetch_all("PRAGMA table_info(fees)")
+    return any(column[1] == 'boarding_fee' for column in columns)
+
+
+def _total_credit_expression(student_alias):
+    """SQL expression for cash and in-kind credits without legacy double counting."""
+    return f"""
+        COALESCE((
+            SELECT SUM(p.amount)
+            FROM payments p
+            WHERE p.student_id = {student_alias}.id
+              AND LOWER(p.method) NOT IN ('maize', 'millet', 'beans')
+        ), 0)
+        + COALESCE((
+            SELECT SUM(contribution.cash_equivalent)
+            FROM contributions contribution
+            WHERE contribution.student_id = {student_alias}.id
+        ), 0)
+    """
+
+
 def generate_payment_summary(start_date, end_date):
     os.makedirs('reports', exist_ok=True)
     with DBManager() as db:
@@ -30,17 +52,18 @@ def generate_student_balance_report():
     os.makedirs('reports', exist_ok=True)
     with DBManager() as db:
         try:
-            query = """
+            boarding_expr = "COALESCE(f.boarding_fee, 0)" if _fees_has_boarding_fee(db) else "0"
+            credit_expr = _total_credit_expression("s")
+            query = f"""
             SELECT s.id, s.admission_number, s.name, c.name as class_name,
                    COALESCE(f.total_fees, 0) as total_fees,
                    COALESCE(f.bus_fee, 0) as bus_fee,
-                   COALESCE(SUM(p.amount), 0) as total_paid,
-                   (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - COALESCE(SUM(p.amount), 0)) as balance
+                   ({credit_expr}) as total_paid,
+                   (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0)
+                    + {boarding_expr} - ({credit_expr})) as balance
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN fees f ON s.id = f.student_id
-            LEFT JOIN payments p ON s.id = p.student_id
-            GROUP BY s.id, s.admission_number, s.name, c.name, f.total_fees, f.bus_fee
             ORDER BY c.name, s.name
             """
             results = db.fetch_all(query)
@@ -62,20 +85,20 @@ def generate_class_report(class_id: int):
     os.makedirs('reports', exist_ok=True)
     with DBManager() as db:
         try:
-            query = (
-                """
+            boarding_expr = "COALESCE(f.boarding_fee, 0)" if _fees_has_boarding_fee(db) else "0"
+            credit_expr = _total_credit_expression("s")
+            query = f"""
                 SELECT s.id, s.admission_number, s.name,
                        COALESCE(f.total_fees, 0) AS total_fees,
                        COALESCE(f.bus_fee, 0) AS bus_fee,
-                       COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0) AS total_paid,
-                       (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) -
-                        COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0)) AS balance
+                       ({credit_expr}) AS total_paid,
+                       (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0)
+                        + {boarding_expr} - ({credit_expr})) AS balance
                 FROM students s
                 LEFT JOIN fees f ON s.id = f.student_id
                 WHERE s.class_id = ?
                 ORDER BY s.name
                 """
-            )
             results = db.fetch_all(query, (class_id,))
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             filename = f"reports/class_{class_id}_report_{timestamp}.csv"
