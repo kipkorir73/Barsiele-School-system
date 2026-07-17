@@ -5,6 +5,40 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+IN_KIND_PAYMENT_METHODS = ("maize", "millet", "beans")
+
+
+def get_total_credits(student_id, db=None):
+    """Return cash payments plus the value of in-kind contributions.
+
+    Older versions mirrored in-kind contributions into both ``payments`` and
+    ``contributions``. The contributions table is now the source of truth for
+    those credits, so legacy in-kind payment rows are excluded to avoid
+    reducing a balance twice.
+    """
+    if db is None:
+        with DBManager() as managed_db:
+            return get_total_credits(student_id, managed_db)
+
+    placeholders = ", ".join("?" for _ in IN_KIND_PAYMENT_METHODS)
+    paid_result = db.fetch_one(
+        f"""
+        SELECT COALESCE(SUM(amount), 0)
+        FROM payments
+        WHERE student_id = ?
+          AND LOWER(method) NOT IN ({placeholders})
+        """,
+        (student_id, *IN_KIND_PAYMENT_METHODS),
+    )
+    contribution_result = db.fetch_one(
+        "SELECT COALESCE(SUM(cash_equivalent), 0) FROM contributions WHERE student_id = ?",
+        (student_id,),
+    )
+    paid = paid_result[0] if paid_result else 0
+    contributed = contribution_result[0] if contribution_result else 0
+    return paid + contributed
+
+
 def record_payment(student_id, amount, method, date, clerk_id, transaction_code=None, bank_reference=None, mpesa_code=None):
     with DBManager() as db:
         try:
@@ -73,9 +107,8 @@ def get_balance(student_id):
                 total_fees = fee[0] if fee else 0
                 bus_fee = fee[1] if fee else 0
                 boarding_fee = 0
-            paid_result = db.fetch_one("SELECT SUM(amount) FROM payments WHERE student_id = ?", (student_id,))
-            paid = paid_result[0] if paid_result and paid_result[0] else 0
-            return total_fees + bus_fee + boarding_fee - paid
+            credits = get_total_credits(student_id, db)
+            return total_fees + bus_fee + boarding_fee - credits
         except Exception as e:
             logging.error(f"Error getting balance for student {student_id}: {e}")
             raise
