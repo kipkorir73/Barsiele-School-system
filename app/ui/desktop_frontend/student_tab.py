@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QFormLayout, QFileDialog, QDialog, QMessageBox, QLabel, QComboBox, QSpinBox
 from PyQt6.QtCore import Qt
 from ...core.student_manager import get_all_students, create_student, update_student, get_student, search_students, get_highest_admission_number
-from ...core.fee_manager import set_fee, get_fee, get_class_term_fee, get_food_requirements
+from ...core.fee_manager import annual_bus_fee, set_fee, get_fee, get_class_term_fee, get_food_requirements
 
 from ...core.payment_manager import get_payments_for_student, get_balance
 from ...core.config import BUS_FEES
@@ -413,10 +413,11 @@ class StudentFormDialog(QDialog):
             with DBManager() as db:
                 row = db.fetch_one("SELECT fee_per_term FROM bus_locations WHERE name = ?", (self.bus_fee.currentText(),))
                 if row:
-                    return float(row[0])
+                    return annual_bus_fee(row[0])
         except Exception:
             pass
-        return BUS_FEES.get(self.bus_fee.currentText(), 0.0) if self.bus_fee.currentText() != "None" else 0.0
+        fee_per_term = BUS_FEES.get(self.bus_fee.currentText(), 0.0) if self.bus_fee.currentText() != "None" else 0.0
+        return annual_bus_fee(fee_per_term)
 
     def _increment_admission_number(self, adm_no: str) -> str:
         try:

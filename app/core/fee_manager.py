@@ -3,6 +3,12 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+TERMS_PER_YEAR = 3
+
+def annual_bus_fee(fee_per_term: float) -> float:
+    """Convert a configured per-term transport fee to the annual charge."""
+    return float(fee_per_term) * TERMS_PER_YEAR
+
 def _fees_has_boarding_fee(db: DBManager) -> bool:
     """Detect if the fees table has the boarding_fee column (legacy DBs may lack it)."""
     try:
