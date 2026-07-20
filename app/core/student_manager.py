@@ -3,6 +3,10 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+class StudentHasFinancialHistoryError(ValueError):
+    """Raised when deleting a student would orphan financial records."""
+
+
 def create_student(admission_number, name, class_id, guardian_contact, profile_picture=None, bus_location=None):
     with DBManager() as db:
         try:
@@ -30,6 +34,42 @@ def update_student(student_id, **kwargs):
         except Exception as e:
             logging.error(f"Error updating student {student_id}: {e}")
             raise
+
+
+def delete_student(student_id):
+    """Delete an unused student without orphaning financial history."""
+    with DBManager() as db:
+        try:
+            # Serialize this check with payment/contribution writes so the
+            # deletion decision and the delete happen atomically.
+            db.cursor.execute("BEGIN IMMEDIATE")
+            has_history = db.fetch_one(
+                """
+                SELECT
+                    EXISTS(SELECT 1 FROM payments WHERE student_id = ?)
+                    OR EXISTS(SELECT 1 FROM contributions WHERE student_id = ?)
+                """,
+                (student_id, student_id)
+            )
+            if has_history and has_history[0]:
+                raise StudentHasFinancialHistoryError(
+                    "Students with payment or contribution history cannot be deleted."
+                )
+
+            # SQLite foreign keys are not enabled by DBManager, so remove the
+            # non-historical fee assessment explicitly before the student.
+            db.cursor.execute("DELETE FROM fees WHERE student_id = ?", (student_id,))
+            db.cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+            deleted = db.cursor.rowcount > 0
+            if deleted:
+                logging.info(f"Deleted unused student {student_id}")
+            return deleted
+        except StudentHasFinancialHistoryError:
+            raise
+        except Exception as e:
+            logging.error(f"Error deleting student {student_id}: {e}")
+            raise
+
 
 def get_student(student_id):
     with DBManager() as db:
