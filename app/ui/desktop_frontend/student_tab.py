@@ -1,6 +1,15 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QFormLayout, QFileDialog, QDialog, QMessageBox, QLabel, QComboBox, QSpinBox
 from PyQt6.QtCore import Qt
-from ...core.student_manager import get_all_students, create_student, update_student, get_student, search_students, get_highest_admission_number
+from ...core.student_manager import (
+    get_all_students,
+    create_student,
+    update_student,
+    delete_student as delete_student_record,
+    StudentHasFinancialHistoryError,
+    get_student,
+    search_students,
+    get_highest_admission_number,
+)
 from ...core.fee_manager import set_fee, get_fee, get_class_term_fee, get_food_requirements
 
 from ...core.payment_manager import get_payments_for_student, get_balance
@@ -224,10 +233,13 @@ class StudentTab(QWidget):
                                            f"Are you sure you want to delete student '{student_name}'?",
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if reply == QMessageBox.StandardButton.Yes:
-                    with DBManager() as db:
-                        db.execute("DELETE FROM students WHERE id = ?", (student_id,))
-                    self.load_students()
-                    QMessageBox.information(self, "Success", "Student deleted successfully")
+                    if delete_student_record(student_id):
+                        self.load_students()
+                        QMessageBox.information(self, "Success", "Student deleted successfully")
+                    else:
+                        QMessageBox.warning(self, "Warning", "Student no longer exists")
+            except StudentHasFinancialHistoryError as e:
+                QMessageBox.warning(self, "Cannot Delete Student", str(e))
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to delete student: {str(e)}")
         else:
