@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QComboBox, QMessageBox, QFormLayout, QTableWidget, QTableWidgetItem
 from ...core.auth import Auth  # Use the Auth class instead
 from ...core.db_manager import DBManager
+from ...core.user_manager import delete_user
 import logging
 
 logging.basicConfig(filename='app/logs/user.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -106,8 +107,7 @@ class UserTab(QWidget):
                 reply = QMessageBox.question(self, "Confirm Delete", "Are you sure you want to delete this user?",
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if reply == QMessageBox.StandardButton.Yes:
-                    with DBManager() as db:
-                        db.execute("DELETE FROM users WHERE id = ?", (user_id,))
+                    delete_user(user_id)
                     self.load_users()
                     QMessageBox.information(self, "Success", "User deleted successfully")
             except Exception as e:
