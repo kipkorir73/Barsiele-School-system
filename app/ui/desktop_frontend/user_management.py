@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTa
 from PyQt6.QtCore import Qt
 from ...core.db_manager import DBManager
 from ...core.auth import Auth
+from ...core.user_manager import delete_user, update_user
 import logging
 import re
 
@@ -225,21 +226,20 @@ class UserManagementDialog(QDialog):
                     # Check if username or email already exists for other users
                     existing = db.fetch_one("SELECT id FROM users WHERE (username = ? OR email = ?) AND id != ?", 
                                           (username, email, user_id))
-                    if existing:
-                        QMessageBox.warning(dialog, "Warning", "Username or email already exists!")
+                if existing:
+                    QMessageBox.warning(dialog, "Warning", "Username or email already exists!")
+                    return
+
+                if password:
+                    if len(password) < 6:
+                        QMessageBox.warning(dialog, "Warning", "Password must be at least 6 characters long!")
                         return
-                    
-                    if password:
-                        if len(password) < 6:
-                            QMessageBox.warning(dialog, "Warning", "Password must be at least 6 characters long!")
-                            return
-                        hashed_password = Auth.hash_password(password)
-                        db.execute("UPDATE users SET username = ?, email = ?, password = ?, role = ? WHERE id = ?",
-                                  (username, email, hashed_password, role, user_id))
-                    else:
-                        db.execute("UPDATE users SET username = ?, email = ?, role = ? WHERE id = ?",
-                                  (username, email, role, user_id))
-                    
+                    hashed_password = Auth.hash_password(password)
+                    update_user(user_id, username, email, role, hashed_password)
+                else:
+                    update_user(user_id, username, email, role)
+
+                with DBManager() as db:
                     # Log the action
                     db.execute("INSERT INTO audit_logs (user_id, action) VALUES (?, ?)",
                               (1, f"Updated user: {username} ({email})"))
@@ -276,9 +276,8 @@ class UserManagementDialog(QDialog):
         
         if reply == QMessageBox.StandardButton.Yes:
             try:
+                delete_user(user_id)
                 with DBManager() as db:
-                    db.execute("DELETE FROM users WHERE id = ?", (user_id,))
-                    
                     # Log the action
                     db.execute("INSERT INTO audit_logs (user_id, action) VALUES (?, ?)",
                               (1, f"Deleted user: {username}"))
