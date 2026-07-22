@@ -32,6 +32,20 @@ def get_class_term_fee(class_id: int, term: int) -> float:
             logging.error(f"Error getting class term fee: {e}")
             raise
 
+def get_class_annual_fee(class_id: int) -> float:
+    """Return the sum of the configured fees for Terms 1 through 3."""
+    with DBManager() as db:
+        try:
+            row = db.fetch_one(
+                "SELECT COALESCE(SUM(amount), 0) FROM class_fees "
+                "WHERE class_id = ? AND term IN (1, 2, 3)",
+                (class_id,)
+            )
+            return float(row[0]) if row else 0.0
+        except Exception as e:
+            logging.error(f"Error getting class annual fee: {e}")
+            raise
+
 def set_bus_location(name: str, fee_per_term: float):
     with DBManager() as db:
         try:
