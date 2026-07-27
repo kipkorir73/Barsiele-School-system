@@ -570,8 +570,15 @@ class AdminDashboard(QWidget):
                 reply = QMessageBox.question(self, "Confirm Delete", f"Are you sure you want to delete {class_name}?",
                                            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
                 if reply == QMessageBox.StandardButton.Yes:
-                    with DBManager() as db:
-                        db.execute("DELETE FROM classes WHERE name = ?", (class_name,))
+                    from ...core.class_manager import ClassHasStudentsError, delete_class as delete_class_record
+                    try:
+                        deleted = delete_class_record(class_name)
+                    except ClassHasStudentsError as e:
+                        QMessageBox.warning(self, "Cannot Delete Class", str(e))
+                        return
+                    if not deleted:
+                        QMessageBox.warning(self, "Warning", f"Class {class_name} was not found")
+                        return
                     self.load_classes()
                     self.load_data()
                     QMessageBox.information(self, "Success", f"Class {class_name} deleted")
