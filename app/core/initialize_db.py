@@ -36,6 +36,13 @@ def init_db():
                     # Extract table name for logging
                     table_name = table_sql.split()[5] if len(table_sql.split()) > 5 else "unknown"
                     logging.info(f"Created/ensured table: {table_name}")
+
+                # Upgrade in-place columns that CREATE TABLE IF NOT EXISTS cannot add
+                try:
+                    from .fee_manager import ensure_boarding_fee_column
+                    ensure_boarding_fee_column(db)
+                except Exception as migrate_err:
+                    logging.warning(f"Could not ensure boarding_fee column: {migrate_err}")
                 
                 # Add some initial data if tables are empty
                 ensure_initial_data(db)
