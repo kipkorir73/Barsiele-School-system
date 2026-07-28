@@ -11,6 +11,19 @@ def _fees_has_boarding_fee(db: DBManager) -> bool:
     except Exception:
         return False
 
+def ensure_boarding_fee_column(db: DBManager) -> bool:
+    """Ensure fees.boarding_fee exists on upgraded databases.
+
+    Returns True when the column is present after this call.
+    Older school databases were created before boarding support; CREATE TABLE IF NOT EXISTS
+    does not add new columns, so Apply Boarding Fee must migrate the schema in place.
+    """
+    if _fees_has_boarding_fee(db):
+        return True
+    db.execute("ALTER TABLE fees ADD COLUMN boarding_fee REAL NOT NULL DEFAULT 0.0")
+    logging.info("Added missing fees.boarding_fee column for upgraded database")
+    return _fees_has_boarding_fee(db)
+
 def set_class_term_fee(class_id: int, term: int, amount: float):
     with DBManager() as db:
         try:
@@ -87,9 +100,8 @@ def set_boarding_fee_for_class(class_id: int, amount: float):
     """Set boarding fee for all students in a class (e.g., Grade 7,8,9). Creates fee rows if missing."""
     with DBManager() as db:
         try:
-            if not _fees_has_boarding_fee(db):
-                logging.warning("Skipping set_boarding_fee_for_class because fees.boarding_fee column does not exist")
-                return
+            if not ensure_boarding_fee_column(db):
+                raise RuntimeError("Unable to add fees.boarding_fee column; boarding fee was not applied")
             # Ensure fee rows exist
             students = db.fetch_all("SELECT id FROM students WHERE class_id = ?", (class_id,))
             for (sid,) in students:
@@ -102,6 +114,7 @@ def set_boarding_fee_for_class(class_id: int, amount: float):
                     (amount, sid)
                 )
             logging.info(f"Set boarding fee {amount} for class {class_id} ({len(students)} students)")
+            return len(students)
         except Exception as e:
             logging.error(f"Error setting boarding fee for class {class_id}: {e}")
             raise

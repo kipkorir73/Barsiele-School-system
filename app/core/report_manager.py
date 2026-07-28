@@ -30,17 +30,22 @@ def generate_student_balance_report():
     os.makedirs('reports', exist_ok=True)
     with DBManager() as db:
         try:
-            query = """
+            fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+            has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+            boarding_expr = "COALESCE(f.boarding_fee, 0)" if has_boarding else "0"
+            query = f"""
             SELECT s.id, s.admission_number, s.name, c.name as class_name,
                    COALESCE(f.total_fees, 0) as total_fees,
                    COALESCE(f.bus_fee, 0) as bus_fee,
+                   {boarding_expr} as boarding_fee,
                    COALESCE(SUM(p.amount), 0) as total_paid,
-                   (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) - COALESCE(SUM(p.amount), 0)) as balance
+                   (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) + {boarding_expr}
+                    - COALESCE(SUM(p.amount), 0)) as balance
             FROM students s
             LEFT JOIN classes c ON s.class_id = c.id
             LEFT JOIN fees f ON s.id = f.student_id
             LEFT JOIN payments p ON s.id = p.student_id
-            GROUP BY s.id, s.admission_number, s.name, c.name, f.total_fees, f.bus_fee
+            GROUP BY s.id, s.admission_number, s.name, c.name, f.total_fees, f.bus_fee{", f.boarding_fee" if has_boarding else ""}
             ORDER BY c.name, s.name
             """
             results = db.fetch_all(query)
@@ -48,7 +53,7 @@ def generate_student_balance_report():
             filename = f"reports/student_balances_{timestamp}.csv"
             with open(filename, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Student ID', 'Adm No', 'Name', 'Class', 'Total Fees', 'Bus Fee', 'Total Paid', 'Balance'])
+                writer.writerow(['Student ID', 'Adm No', 'Name', 'Class', 'Total Fees', 'Bus Fee', 'Boarding Fee', 'Total Paid', 'Balance'])
                 for result in results:
                     writer.writerow(result)
             logging.info(f"Generated student balance report: {filename}")
@@ -62,13 +67,17 @@ def generate_class_report(class_id: int):
     os.makedirs('reports', exist_ok=True)
     with DBManager() as db:
         try:
+            fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+            has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+            boarding_expr = "COALESCE(f.boarding_fee, 0)" if has_boarding else "0"
             query = (
-                """
+                f"""
                 SELECT s.id, s.admission_number, s.name,
                        COALESCE(f.total_fees, 0) AS total_fees,
                        COALESCE(f.bus_fee, 0) AS bus_fee,
+                       {boarding_expr} AS boarding_fee,
                        COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0) AS total_paid,
-                       (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) -
+                       (COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0) + {boarding_expr} -
                         COALESCE((SELECT SUM(p.amount) FROM payments p WHERE p.student_id = s.id), 0)) AS balance
                 FROM students s
                 LEFT JOIN fees f ON s.id = f.student_id
@@ -81,7 +90,7 @@ def generate_class_report(class_id: int):
             filename = f"reports/class_{class_id}_report_{timestamp}.csv"
             with open(filename, 'w', newline='', encoding='utf-8') as f:
                 writer = csv.writer(f)
-                writer.writerow(['Student ID', 'Adm No', 'Name', 'Total Fees', 'Bus Fee', 'Total Paid', 'Balance'])
+                writer.writerow(['Student ID', 'Adm No', 'Name', 'Total Fees', 'Bus Fee', 'Boarding Fee', 'Total Paid', 'Balance'])
                 for result in results:
                     writer.writerow(result)
             logging.info(f"Generated class report: {filename}")
