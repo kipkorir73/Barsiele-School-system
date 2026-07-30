@@ -1,16 +1,16 @@
 import shutil
 import os
 from datetime import datetime
-from pathlib import Path
 import logging
+from ..core.config import get_sqlite_path, PROJECT_ROOT
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def backup():
     try:
-        backup_dir = "backups"
+        backup_dir = str(PROJECT_ROOT / "backups")
         os.makedirs(backup_dir, exist_ok=True)
-        db_path = "data/school_fees.db"  # Adjust for MySQL if needed
+        db_path = get_sqlite_path()
         if not os.path.exists(db_path):
             logging.warning("Database file not found. Please initialize the database first.")
             print("Database file not found. Please initialize the database first.")
@@ -18,7 +18,19 @@ def backup():
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         backup_filename = f'school_fees_backup_{timestamp}.db'
         backup_path = os.path.join(backup_dir, backup_filename)
-        shutil.copy2(db_path, backup_path)
+        # Use SQLite's online backup API when possible so we don't copy a
+        # partially-written file if the app has the DB open.
+        try:
+            import sqlite3
+            src = sqlite3.connect(db_path)
+            dst = sqlite3.connect(backup_path)
+            try:
+                src.backup(dst)
+            finally:
+                dst.close()
+                src.close()
+        except Exception:
+            shutil.copy2(db_path, backup_path)
         logging.info(f"Backup created successfully: {backup_path}")
         print(f"Backup created successfully: {backup_path}")
         cleanup_old_backups(backup_dir)
