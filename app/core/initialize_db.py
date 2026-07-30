@@ -1,5 +1,6 @@
 from .db_manager import DBManager
 from .models import tables
+from .config import get_sqlite_path
 import logging
 import os
 import time
@@ -7,8 +8,8 @@ import time
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def init_db():
-    # Ensure the data directory exists
-    db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
+    # Ensure the data directory exists (path is cwd-independent)
+    db_path = get_sqlite_path()
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     
     # If database file exists and is locked, try to handle it

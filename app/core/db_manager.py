@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 import os
 import logging
 from pathlib import Path
+from .config import get_sqlite_path
 
 load_dotenv()
 
@@ -11,7 +12,7 @@ class DBManager:
         """Initialize a new database connection for each instance"""
         db_type = os.getenv('DB_TYPE', 'sqlite')
         if db_type == 'sqlite':
-            db_path = os.getenv('SQLITE_PATH', 'app/data/school_fees.db')
+            db_path = get_sqlite_path()
             # Ensure the directory exists
             Path(db_path).parent.mkdir(parents=True, exist_ok=True)
             self.conn = sqlite3.connect(db_path)
