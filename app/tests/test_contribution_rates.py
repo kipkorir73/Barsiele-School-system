@@ -2,7 +2,6 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
-from unittest import mock
 
 from app.core import config
 
@@ -78,27 +77,23 @@ class ContributionRateUpdateTests(unittest.TestCase):
             self.assertEqual(os.environ['RATE_MAIZE'], '55.0')
 
     def test_settings_save_rates_uses_update_helper(self):
-        """Guard the UI path so it cannot regress to append-only .env writes."""
-        from app.ui.desktop_frontend import settings_tab as settings_module
+        """Guard the UI path so it cannot regress to append-only .env writes.
 
-        self.assertIs(settings_module.update_contribution_rates, config.update_contribution_rates)
+        Avoid importing the desktop package (PyQt/libEGL unavailable in CI images).
+        """
+        import ast
 
-        with mock.patch.object(settings_module, 'update_contribution_rates') as mocked:
-            tab = settings_module.SettingsTab.__new__(settings_module.SettingsTab)
-            tab.maize_rate = mock.Mock()
-            tab.maize_rate.text.return_value = '12.5'
-            tab.millet_rate = mock.Mock()
-            tab.millet_rate.text.return_value = '13.5'
-            tab.beans_rate = mock.Mock()
-            tab.beans_rate.text.return_value = '14.5'
+        source = Path('app/ui/desktop_frontend/settings_tab.py').read_text(encoding='utf-8')
+        tree = ast.parse(source)
+        imported_names = set()
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom):
+                for alias in node.names:
+                    imported_names.add(alias.asname or alias.name)
 
-            with mock.patch.object(settings_module.QMessageBox, 'information'), \
-                 mock.patch.object(settings_module.QMessageBox, 'critical'):
-                settings_module.SettingsTab.save_rates(tab)
-
-            mocked.assert_called_once_with(
-                {'maize': 12.5, 'millet': 13.5, 'beans': 14.5}
-            )
+        self.assertIn('update_contribution_rates', imported_names)
+        self.assertNotIn("open('.env', 'a')", source)
+        self.assertIn('update_contribution_rates(new_rates)', source)
 
 
 if __name__ == '__main__':
