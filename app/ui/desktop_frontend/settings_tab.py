@@ -1,7 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLineEdit, QPushButton, QMessageBox, QLabel
 from PyQt6.QtCore import Qt
-from ...core.config import DEFAULT_RATES
-from ...core.db_manager import DBManager
+from ...core.config import DEFAULT_RATES, update_contribution_rates
 import logging
 
 logging.basicConfig(filename='app/logs/settings.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -43,10 +42,7 @@ class SettingsTab(QWidget):
                 'millet': float(self.millet_rate.text()),
                 'beans': float(self.beans_rate.text())
             }
-            with open('.env', 'a') as f:
-                f.write(f"\nRATE_MAIZE={new_rates['maize']}\n")
-                f.write(f"RATE_MILLET={new_rates['millet']}\n")
-                f.write(f"RATE_BEANS={new_rates['beans']}\n")
+            update_contribution_rates(new_rates)
             QMessageBox.information(self, "Success", "Rates updated successfully!")
             logging.info(f"Updated contribution rates: {new_rates}")
         except ValueError as e:
