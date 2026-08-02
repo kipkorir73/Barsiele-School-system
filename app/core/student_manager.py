@@ -71,11 +71,33 @@ def search_students(query):
             logging.error(f"Error searching students for query '{query}': {e}")
             raise
 
+def _admission_sort_key(admission_number):
+    """Numeric key for admission numbers like ADM999 / ADM1000.
+
+    Lexicographic MAX is wrong once digit length grows: 'ADM999' > 'ADM1000'
+    as text, so the next prefilled number collides forever after ADM1000.
+    """
+    if admission_number is None:
+        return (-1, 0, "")
+    text = str(admission_number)
+    digits = ''.join(ch for ch in text if ch.isdigit())
+    if not digits:
+        return (-1, 0, text)
+    return (int(digits), len(text), text)
+
+
 def get_highest_admission_number():
     with DBManager() as db:
         try:
-            result = db.fetch_one("SELECT MAX(admission_number) FROM students")
-            return result[0] or "ADM000"
+            rows = db.fetch_all("SELECT admission_number FROM students")
+            best = None
+            for row in rows:
+                adm = row[0] if row is not None else None
+                if not adm:
+                    continue
+                if best is None or _admission_sort_key(adm) > _admission_sort_key(best):
+                    best = str(adm)
+            return best or "ADM000"
         except Exception as e:
             logging.error(f"Error fetching highest admission number: {e}")
             raise
