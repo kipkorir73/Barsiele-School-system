@@ -5,10 +5,38 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def _normalize_payment_ref(value):
+    """Strip whitespace; treat blank strings as missing."""
+    if value is None:
+        return None
+    stripped = str(value).strip()
+    return stripped or None
+
+
+def _normalize_payment_method(method):
+    return (method or "").strip().lower().replace("_", " ").replace("-", " ")
+
+
 def record_payment(student_id, amount, method, date, clerk_id, transaction_code=None, bank_reference=None, mpesa_code=None):
     with DBManager() as db:
         try:
             receipt_no = str(uuid.uuid4())[:8]  # Unique receipt number
+            transaction_code = _normalize_payment_ref(transaction_code)
+            bank_reference = _normalize_payment_ref(bank_reference)
+            mpesa_code = _normalize_payment_ref(mpesa_code)
+            method_key = _normalize_payment_method(method)
+
+            # Non-cash methods require a verification code. Empty/NULL codes bypass
+            # application and SQLite UNIQUE checks, allowing duplicate ledger rows.
+            if method_key in ("m pesa", "mpesa"):
+                if not mpesa_code:
+                    raise ValueError("M-Pesa code is required for M-Pesa payments.")
+            elif method_key == "bank transfer":
+                if not bank_reference:
+                    raise ValueError("Bank reference is required for Bank Transfer payments.")
+            elif method_key == "cheque":
+                if not transaction_code:
+                    raise ValueError("Cheque number is required for Cheque payments.")
             
             # Check for duplicate transaction codes to prevent duplicate payments
             if transaction_code:
