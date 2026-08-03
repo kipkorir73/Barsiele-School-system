@@ -177,14 +177,23 @@ class PaymentTab(QWidget):
                 
             method = self.method.currentText()
             date = self.date.date().toString("yyyy-MM-dd")
-            # Collect reference codes
+            # Collect reference codes (required for non-cash to prevent duplicate ledger rows)
             tx_code = None; bank_ref = None; mpesa_code = None
             if method == 'M-Pesa':
                 mpesa_code = self.mpesa_code.text().strip() or None
+                if not mpesa_code:
+                    QMessageBox.warning(self, "Warning", "M-Pesa code is required")
+                    return
             elif method == 'Bank Transfer':
                 bank_ref = self.bank_ref.text().strip() or None
+                if not bank_ref:
+                    QMessageBox.warning(self, "Warning", "Bank reference is required")
+                    return
             elif method == 'Cheque':
                 tx_code = self.cheque_no.text().strip() or None
+                if not tx_code:
+                    QMessageBox.warning(self, "Warning", "Cheque number is required")
+                    return
 
             payment_id, receipt_no = record_payment(
                 student_id, amount, method, date, self.user['id'],
