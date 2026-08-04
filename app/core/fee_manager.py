@@ -3,6 +3,22 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def parse_required_amount(text) -> float:
+    """Parse a required monetary amount from UI text.
+
+    Blank/whitespace must not coerce to 0 — that silently mass-overwrites
+    class term fees, boarding fees, and bus prices.
+    """
+    if text is None or not str(text).strip():
+        raise ValueError("Amount is required")
+    try:
+        amount = float(str(text).strip())
+    except (TypeError, ValueError) as e:
+        raise ValueError("Amount must be a valid number") from e
+    if amount < 0:
+        raise ValueError("Amount cannot be negative")
+    return amount
+
 def _fees_has_boarding_fee(db: DBManager) -> bool:
     """Detect if the fees table has the boarding_fee column (legacy DBs may lack it)."""
     try:
@@ -12,6 +28,8 @@ def _fees_has_boarding_fee(db: DBManager) -> bool:
         return False
 
 def set_class_term_fee(class_id: int, term: int, amount: float):
+    if amount is None or amount < 0:
+        raise ValueError("Term fee amount cannot be negative")
     with DBManager() as db:
         try:
             db.execute(
@@ -33,6 +51,8 @@ def get_class_term_fee(class_id: int, term: int) -> float:
             raise
 
 def set_bus_location(name: str, fee_per_term: float):
+    if fee_per_term is None or fee_per_term < 0:
+        raise ValueError("Bus fee amount cannot be negative")
     with DBManager() as db:
         try:
             db.execute(
@@ -85,6 +105,8 @@ def get_fee(student_id):
 
 def set_boarding_fee_for_class(class_id: int, amount: float):
     """Set boarding fee for all students in a class (e.g., Grade 7,8,9). Creates fee rows if missing."""
+    if amount is None or amount < 0:
+        raise ValueError("Boarding fee amount cannot be negative")
     with DBManager() as db:
         try:
             if not _fees_has_boarding_fee(db):

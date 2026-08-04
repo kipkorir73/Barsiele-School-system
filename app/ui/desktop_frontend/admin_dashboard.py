@@ -9,11 +9,12 @@ from ...core.fee_manager import (
     set_boarding_fee_for_class,
     set_food_requirements,
     get_food_requirements,
+    parse_required_amount,
 )
 from ...core.student_manager import get_all_students
 from ...core.student_manager import create_student, update_student, get_student
 from ...core.auth import Auth  # Use Auth class
-from ...core.payment_manager import get_balance  # Import the missing function
+from ...core.payment_manager import get_balance, get_class_arrears_summary  # Import the missing function
 from .user_management import UserManagementDialog
 from .arrears_detail import ArrearsDetailDialog, HighArrearsDialog
 from .activity_logs import ActivityLogsDialog
@@ -403,27 +404,13 @@ class AdminDashboard(QWidget):
                 # Keep header clean
                 self.header.setText(self._greeting(self.user.get('username', 'Admin')))
                 
-                # Class-wise Arrears (handle pre-migration DBs that may not have boarding_fee)
-                fees_cols = db.fetch_all("PRAGMA table_info(fees)")
-                has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
-                amount_expr = "COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0)"
-                if has_boarding:
-                    amount_expr += " + COALESCE(f.boarding_fee, 0)"
-                class_arrears = db.fetch_all(f"""
-                    SELECT c.name,
-                           COUNT(s.id) as num_students,
-                           SUM({amount_expr} - 
-                               COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0)) as arrears
-                    FROM classes c
-                    LEFT JOIN students s ON c.id = s.class_id
-                    LEFT JOIN fees f ON s.id = f.student_id
-                    GROUP BY c.name
-                """)
+                # Class-wise Arrears (positive balances only; overpayments must not cancel debts)
+                class_arrears = get_class_arrears_summary()
                 self.class_arrears_table.setRowCount(len(class_arrears))
                 for row, (class_name, num_students, arrears) in enumerate(class_arrears):
                     self.class_arrears_table.setItem(row, 0, QTableWidgetItem(class_name or ""))
                     self.class_arrears_table.setItem(row, 1, QTableWidgetItem(str(num_students or 0)))
-                    arrears_value = arrears if arrears and arrears > 0 else 0
+                    arrears_value = arrears if arrears else 0
                     self.class_arrears_table.setItem(row, 2, QTableWidgetItem(f"KSh {arrears_value:,.2f}"))
                 
                 # High Arrears Students
@@ -591,7 +578,11 @@ class AdminDashboard(QWidget):
                     return
                 class_id = row[0]
             term = self.term_combo.currentIndex() + 1
-            amount = float(self.term_amount.text() or 0)
+            try:
+                amount = parse_required_amount(self.term_amount.text())
+            except ValueError as e:
+                QMessageBox.warning(self, "Warning", str(e))
+                return
             set_class_term_fee(class_id, term, amount)
             QMessageBox.information(self, "Saved", f"Saved fee for {class_name} - Term {term}: KSh {amount:,.2f}")
         except Exception as e:
@@ -646,7 +637,21 @@ class AdminDashboard(QWidget):
                 QMessageBox.warning(self, "Warning", "Unknown class")
                 return
             class_id = row[0]
-            amount = float(self.boarding_amount.text() or 0)
+            try:
+                amount = parse_required_amount(self.boarding_amount.text())
+            except ValueError as e:
+                QMessageBox.warning(self, "Warning", str(e))
+                return
+            if amount == 0:
+                confirm = QMessageBox.question(
+                    self,
+                    "Clear boarding fee?",
+                    f"This will set boarding fee to KSh 0.00 for every student in {class_name}. Continue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                if confirm != QMessageBox.StandardButton.Yes:
+                    return
             set_boarding_fee_for_class(class_id, amount)
             QMessageBox.information(self, "Saved", f"Applied boarding fee KSh {amount:,.2f} to {class_name}")
             self.load_data()
@@ -656,9 +661,13 @@ class AdminDashboard(QWidget):
     def save_bus_location(self):
         try:
             name = self.bus_name.text().strip()
-            amount = float(self.bus_fee.text() or 0)
             if not name:
                 QMessageBox.warning(self, "Warning", "Enter a bus location name")
+                return
+            try:
+                amount = parse_required_amount(self.bus_fee.text())
+            except ValueError as e:
+                QMessageBox.warning(self, "Warning", str(e))
                 return
             set_bus_location(name, amount)
             QMessageBox.information(self, "Saved", f"Saved bus location {name}: KSh {amount:,.2f} per term")
