@@ -80,6 +80,33 @@ def get_balance(student_id):
             logging.error(f"Error getting balance for student {student_id}: {e}")
             raise
 
+def get_class_arrears_summary():
+    """Return (class_name, num_students, positive_arrears_total) rows.
+
+    Overpayments on one student must not cancel another student's debt in the
+    class total — only positive per-student balances are summed.
+    """
+    with DBManager() as db:
+        try:
+            fees_cols = db.fetch_all("PRAGMA table_info(fees)")
+            has_boarding = any(col[1] == 'boarding_fee' for col in fees_cols)
+            amount_expr = "COALESCE(f.total_fees, 0) + COALESCE(f.bus_fee, 0)"
+            if has_boarding:
+                amount_expr += " + COALESCE(f.boarding_fee, 0)"
+            return db.fetch_all(f"""
+                SELECT c.name,
+                       COUNT(s.id) as num_students,
+                       SUM(MAX(0, {amount_expr} -
+                           COALESCE((SELECT SUM(amount) FROM payments p WHERE p.student_id = s.id), 0))) as arrears
+                FROM classes c
+                LEFT JOIN students s ON c.id = s.class_id
+                LEFT JOIN fees f ON s.id = f.student_id
+                GROUP BY c.name
+            """)
+        except Exception as e:
+            logging.error(f"Error getting class arrears summary: {e}")
+            raise
+
 def log_action(user_id, action):
     """Helper function to log actions"""
     with DBManager() as db:
