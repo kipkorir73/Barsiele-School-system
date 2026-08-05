@@ -116,6 +116,19 @@ class PaymentTab(QWidget):
         self.setLayout(layout)
         self.update_balance()
 
+    def showEvent(self, event):
+        # Refresh the combo whenever the tab becomes visible so students added
+        # or deleted in other tabs cannot leave stale selectable IDs.
+        super().showEvent(event)
+        previous_id = self.student_combo.currentData()
+        self.load_students()
+        if previous_id is not None:
+            for i in range(self.student_combo.count()):
+                if self.student_combo.itemData(i) == previous_id:
+                    self.student_combo.setCurrentIndex(i)
+                    break
+        self.update_balance()
+
     def load_students(self):
         try:
             self.student_combo.clear()
@@ -203,6 +216,12 @@ class PaymentTab(QWidget):
                 if QMessageBox.question(self, "Open Receipt", "Open the receipt now?", 
                                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No) == QMessageBox.StandardButton.Yes:
                     os.startfile(receipt_file)
+        except ValueError as e:
+            # Missing/deleted student or duplicate reference — refresh combo if stale.
+            if "does not exist" in str(e).lower():
+                self.load_students()
+                self.update_balance()
+            QMessageBox.critical(self, "Error", f"Failed to record payment: {str(e)}")
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to record payment: {str(e)}")
 
@@ -220,6 +239,16 @@ class PaymentTab(QWidget):
             rate_key = item.lower()
             cash_equiv = qty * DEFAULT_RATES.get(rate_key, 0)
             with DBManager() as db:
+                student = db.fetch_one("SELECT id FROM students WHERE id = ?", (student_id,))
+                if not student:
+                    QMessageBox.warning(
+                        self,
+                        "Warning",
+                        "Selected student no longer exists. Refreshing student list.",
+                    )
+                    self.load_students()
+                    self.update_balance()
+                    return
                 db.execute("INSERT INTO contributions (student_id, item, quantity, cash_equivalent) VALUES (?, ?, ?, ?)",
                           (student_id, item, qty, cash_equiv))
             QMessageBox.information(self, "Saved", f"Contribution recorded: {item} {qty} kg (KSh {cash_equiv:,.2f})")
