@@ -8,6 +8,16 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 def record_payment(student_id, amount, method, date, clerk_id, transaction_code=None, bank_reference=None, mpesa_code=None):
     with DBManager() as db:
         try:
+            # Reject payments for deleted/missing students. PaymentTab caches the
+            # student combo at construction time, so a student removed in another
+            # tab can still appear selectable and would otherwise create an
+            # orphan ledger row invisible to student/class JOIN reports.
+            student = db.fetch_one("SELECT id FROM students WHERE id = ?", (student_id,))
+            if not student:
+                raise ValueError(
+                    f"Student {student_id} does not exist. Payment not recorded."
+                )
+
             receipt_no = str(uuid.uuid4())[:8]  # Unique receipt number
             
             # Check for duplicate transaction codes to prevent duplicate payments
