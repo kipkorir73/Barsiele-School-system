@@ -32,6 +32,53 @@ def get_class_term_fee(class_id: int, term: int) -> float:
             logging.error(f"Error getting class term fee: {e}")
             raise
 
+def get_class_annual_fee(class_id: int) -> float:
+    """Sum configured Term 1–3 amounts for a class (missing terms count as 0)."""
+    with DBManager() as db:
+        try:
+            rows = db.fetch_all(
+                "SELECT amount FROM class_fees WHERE class_id = ? AND term IN (1, 2, 3)",
+                (class_id,)
+            )
+            return float(sum((row[0] or 0) for row in rows))
+        except Exception as e:
+            logging.error(f"Error getting class annual fee: {e}")
+            raise
+
+def apply_class_fees_for_class(class_id: int) -> int:
+    """Set each enrolled student's total_fees to the class annual fee.
+
+    Preserves existing bus_fee / boarding_fee. Creates a fees row when missing.
+    Returns the number of students updated.
+    """
+    annual = get_class_annual_fee(class_id)
+    with DBManager() as db:
+        try:
+            students = db.fetch_all("SELECT id FROM students WHERE class_id = ?", (class_id,))
+            has_boarding = _fees_has_boarding_fee(db)
+            for (sid,) in students:
+                if has_boarding:
+                    db.execute(
+                        "INSERT OR IGNORE INTO fees (student_id, total_fees, bus_fee, boarding_fee) VALUES (?, 0, 0, 0)",
+                        (sid,)
+                    )
+                else:
+                    db.execute(
+                        "INSERT OR IGNORE INTO fees (student_id, total_fees, bus_fee) VALUES (?, 0, 0)",
+                        (sid,)
+                    )
+                db.execute(
+                    "UPDATE fees SET total_fees = ? WHERE student_id = ?",
+                    (annual, sid)
+                )
+            logging.info(
+                f"Applied annual fee {annual} to class {class_id} ({len(students)} students)"
+            )
+            return len(students)
+        except Exception as e:
+            logging.error(f"Error applying class fees for class {class_id}: {e}")
+            raise
+
 def set_bus_location(name: str, fee_per_term: float):
     with DBManager() as db:
         try:

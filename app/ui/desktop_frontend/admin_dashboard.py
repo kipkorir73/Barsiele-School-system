@@ -4,6 +4,8 @@ from ...core.db_manager import DBManager
 from ...core.fee_manager import (
     set_class_term_fee,
     get_class_term_fee,
+    get_class_annual_fee,
+    apply_class_fees_for_class,
     set_bus_location,
     get_bus_locations,
     set_boarding_fee_for_class,
@@ -593,7 +595,17 @@ class AdminDashboard(QWidget):
             term = self.term_combo.currentIndex() + 1
             amount = float(self.term_amount.text() or 0)
             set_class_term_fee(class_id, term, amount)
-            QMessageBox.information(self, "Saved", f"Saved fee for {class_name} - Term {term}: KSh {amount:,.2f}")
+            # Class term fees are the schedule source of truth — push the annual
+            # total onto every enrolled student so arrears stay accurate.
+            updated = apply_class_fees_for_class(class_id)
+            annual = get_class_annual_fee(class_id)
+            QMessageBox.information(
+                self,
+                "Saved",
+                f"Saved fee for {class_name} - Term {term}: KSh {amount:,.2f}\n"
+                f"Applied annual fee KSh {annual:,.2f} to {updated} student(s)."
+            )
+            self.load_data()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to save term fee: {str(e)}")
 
