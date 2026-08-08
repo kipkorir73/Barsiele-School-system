@@ -5,24 +5,54 @@ import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+def _normalize_payment_ref(value):
+    """Canonicalize verification codes for storage and duplicate detection.
+
+    Clerks often retype M-Pesa/bank codes with different case or incidental
+    spaces. Exact-string matching allowed those variants through as new
+    ledger rows and understated balances.
+    """
+    if value is None:
+        return None
+    compact = "".join(str(value).split()).upper()
+    return compact or None
+
+
+def _ref_match_sql(column):
+    """SQL expression that matches legacy mixed-case / spaced codes."""
+    return f"REPLACE(UPPER(IFNULL({column}, '')), ' ', '')"
+
+
 def record_payment(student_id, amount, method, date, clerk_id, transaction_code=None, bank_reference=None, mpesa_code=None):
     with DBManager() as db:
         try:
             receipt_no = str(uuid.uuid4())[:8]  # Unique receipt number
+            transaction_code = _normalize_payment_ref(transaction_code)
+            bank_reference = _normalize_payment_ref(bank_reference)
+            mpesa_code = _normalize_payment_ref(mpesa_code)
             
             # Check for duplicate transaction codes to prevent duplicate payments
             if transaction_code:
-                existing = db.fetch_one("SELECT id FROM payments WHERE transaction_code = ?", (transaction_code,))
+                existing = db.fetch_one(
+                    f"SELECT id FROM payments WHERE {_ref_match_sql('transaction_code')} = ?",
+                    (transaction_code,),
+                )
                 if existing:
                     raise ValueError(f"Transaction code {transaction_code} already exists. Duplicate payment prevented.")
             
             if mpesa_code:
-                existing = db.fetch_one("SELECT id FROM payments WHERE mpesa_code = ?", (mpesa_code,))
+                existing = db.fetch_one(
+                    f"SELECT id FROM payments WHERE {_ref_match_sql('mpesa_code')} = ?",
+                    (mpesa_code,),
+                )
                 if existing:
                     raise ValueError(f"M-Pesa code {mpesa_code} already exists. Duplicate payment prevented.")
             
             if bank_reference:
-                existing = db.fetch_one("SELECT id FROM payments WHERE bank_reference = ?", (bank_reference,))
+                existing = db.fetch_one(
+                    f"SELECT id FROM payments WHERE {_ref_match_sql('bank_reference')} = ?",
+                    (bank_reference,),
+                )
                 if existing:
                     raise ValueError(f"Bank reference {bank_reference} already exists. Duplicate payment prevented.")
             
