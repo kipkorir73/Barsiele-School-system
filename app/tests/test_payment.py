@@ -124,6 +124,27 @@ class TestPayment(unittest.TestCase):
             stored = db.fetch_one("SELECT mpesa_code FROM payments WHERE student_id = ?", (self.student_id,))[0]
         self.assertEqual(stored, "ABCD12")
 
+    def test_detects_duplicate_against_legacy_mixed_case_row(self):
+        """Existing rows may still have spaced/mixed-case codes from before normalization."""
+        with DBManager() as db:
+            db.execute(
+                "INSERT INTO payments (student_id, amount, method, date, clerk_id, receipt_no, mpesa_code, verified) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (self.student_id, 200.0, "M-Pesa", "2025-08-15", self.clerk_id, "legacy01", "Gh wtrye6772", 1),
+            )
+        with self.assertRaises(ValueError) as ctx:
+            record_payment(
+                self.student_id,
+                200.0,
+                "M-Pesa",
+                "2025-08-16",
+                self.clerk_id,
+                mpesa_code="GHWTRYE6772",
+            )
+        self.assertIn("already exists", str(ctx.exception))
+        self.assertEqual(self._payment_count(), 1)
+        self.assertEqual(get_balance(self.student_id), 800.0)
+
 
 if __name__ == "__main__":
     unittest.main()
