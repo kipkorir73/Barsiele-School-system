@@ -74,7 +74,7 @@ tables = [
         date TEXT NOT NULL,
         clerk_id INTEGER NOT NULL,
         receipt_no TEXT UNIQUE NOT NULL,
-        transaction_code TEXT UNIQUE,
+        transaction_code TEXT,
         bank_reference TEXT,
         mpesa_code TEXT,
         verified BOOLEAN DEFAULT 0,
