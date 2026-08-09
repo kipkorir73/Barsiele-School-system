@@ -71,12 +71,14 @@ def migrate_database(db_path):
         if table_exists('payments'):
             cursor.execute("PRAGMA table_info(payments)")
             payment_columns = [column[1] for column in cursor.fetchall()]
+            # Do not add UNIQUE on transaction_code: cheque numbers collide across payers.
+            # mpesa_code/bank_reference uniqueness is enforced in application code.
             if 'transaction_code' not in payment_columns:
-                payment_migrations.append('transaction_code TEXT UNIQUE')
+                payment_migrations.append('transaction_code TEXT')
             if 'mpesa_code' not in payment_columns:
-                payment_migrations.append('mpesa_code TEXT UNIQUE')
+                payment_migrations.append('mpesa_code TEXT')
             if 'bank_reference' not in payment_columns:
-                payment_migrations.append('bank_reference TEXT UNIQUE')
+                payment_migrations.append('bank_reference TEXT')
             if 'verified' not in payment_columns:
                 payment_migrations.append('verified BOOLEAN DEFAULT 0')
         

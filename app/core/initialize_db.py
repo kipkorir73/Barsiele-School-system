@@ -36,6 +36,11 @@ def init_db():
                     # Extract table name for logging
                     table_name = table_sql.split()[5] if len(table_sql.split()) > 5 else "unknown"
                     logging.info(f"Created/ensured table: {table_name}")
+
+                # Legacy DBs may still have UNIQUE(transaction_code), which false-rejects
+                # legitimate cheque payments that share common printed numbers.
+                from .payment_manager import ensure_transaction_code_not_globally_unique
+                ensure_transaction_code_not_globally_unique(db)
                 
                 # Add some initial data if tables are empty
                 ensure_initial_data(db)
