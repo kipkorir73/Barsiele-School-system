@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, QTableWidgetItem, QLineEdit, QPushButton, QFormLayout, QFileDialog, QDialog, QMessageBox, QLabel, QComboBox, QSpinBox
 from PyQt6.QtCore import Qt
-from ...core.student_manager import get_all_students, create_student, update_student, get_student, search_students, get_highest_admission_number
+from ...core.student_manager import get_all_students, create_student_with_fees, update_student, get_student, search_students, get_highest_admission_number
 from ...core.fee_manager import set_fee, get_fee, get_class_term_fee, get_food_requirements
 
 from ...core.payment_manager import get_payments_for_student, get_balance
@@ -167,10 +167,21 @@ class StudentTab(QWidget):
         if dialog.exec() == QDialog.DialogCode.Accepted:
             try:
                 values = dialog.get_values()
-                student_id = create_student(**values)
+                # Resolve fees before inserting so a fee lookup failure cannot
+                # leave a committed student row with no fees assessment.
                 term_fee = get_class_term_fee(values['class_id'], 1)
                 total_fee = float(dialog.get_fee()) if dialog.get_fee() > 0 else (term_fee * 3)
-                set_fee(student_id, total_fee, dialog.get_bus_fee())
+                bus_fee = dialog.get_bus_fee()
+                create_student_with_fees(
+                    values['admission_number'],
+                    values['name'],
+                    values['class_id'],
+                    values['guardian_contact'],
+                    total_fee,
+                    bus_fee,
+                    values.get('profile_picture'),
+                    values.get('bus_location'),
+                )
                 self.load_students()
                 QMessageBox.information(self, "Success", f"Student added successfully with admission number: {values.get('admission_number','')}")
             except Exception as e:
