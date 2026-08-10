@@ -18,6 +18,53 @@ def create_student(admission_number, name, class_id, guardian_contact, profile_p
             logging.error(f"Error creating student {name}: {e}")
             raise
 
+def create_student_with_fees(
+    admission_number,
+    name,
+    class_id,
+    guardian_contact,
+    total_fees,
+    bus_fee=0.0,
+    profile_picture=None,
+    bus_location=None,
+):
+    """Create a student and fee row in a single transaction.
+
+    ``DBManager.execute`` commits on every statement, so calling
+    ``create_student`` then ``set_fee`` can leave a committed student with no
+    fees (and a zero balance) if the fee write fails. This helper uses the
+    same connection without mid-statement commits so both rows roll back
+    together on failure.
+    """
+    with DBManager() as db:
+        try:
+            db.cursor.execute(
+                "INSERT INTO students (admission_number, class_id, name, guardian_contact, profile_picture, bus_location) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (admission_number, class_id, name, guardian_contact, profile_picture, bus_location),
+            )
+            student_id = db.cursor.lastrowid
+            fee_cols = db.cursor.execute("PRAGMA table_info(fees)").fetchall()
+            has_boarding = any(col[1] == "boarding_fee" for col in fee_cols)
+            if has_boarding:
+                db.cursor.execute(
+                    "INSERT INTO fees (student_id, total_fees, bus_fee, boarding_fee) VALUES (?, ?, ?, 0)",
+                    (student_id, total_fees, bus_fee),
+                )
+            else:
+                db.cursor.execute(
+                    "INSERT INTO fees (student_id, total_fees, bus_fee) VALUES (?, ?, ?)",
+                    (student_id, total_fees, bus_fee),
+                )
+            logging.info(
+                f"Created student with fees: {name} (ID: {student_id}) "
+                f"total={total_fees} bus={bus_fee}"
+            )
+            return student_id
+        except Exception as e:
+            logging.error(f"Error creating student with fees {name}: {e}")
+            raise
+
 def update_student(student_id, **kwargs):
     if not kwargs:
         return
