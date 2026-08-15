@@ -7,6 +7,10 @@ from .report_tab import ReportTab
 from .user_tab import UserTab
 from .admin_dashboard import AdminDashboard
 from .settings_tab import SettingsTab
+from ...core.session_lifecycle import (
+    resolve_main_window_close,
+    retain_login_window,
+)
 import logging
 from datetime import datetime
 
@@ -43,6 +47,7 @@ class MainWindow(QMainWindow):
         self.logout_timer.timeout.connect(self.check_inactivity)
         self.logout_timer.start(300000)  # 5 minutes
         self.last_activity = datetime.now()
+        self._logging_out = False
 
     def create_menu_bar(self):
         menubar = self.menuBar()
@@ -91,13 +96,22 @@ class MainWindow(QMainWindow):
 
     def logout(self):
         from PyQt6.QtWidgets import QMessageBox
+        if self._logging_out:
+            return
         reply = QMessageBox.question(self, 'Logout', 'Are you sure you want to logout?', 
                                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
         if reply == QMessageBox.StandardButton.Yes:
-            self.close()
-            from .login import LoginWindow
-            self.login_window = LoginWindow()
-            self.login_window.show()
+            self._begin_logout()
+
+    def _begin_logout(self):
+        """Close this authenticated session and return to login without quitting."""
+        self._logging_out = True
+        self.logout_timer.stop()
+        from .login import LoginWindow
+        login_window = retain_login_window(LoginWindow())
+        self.login_window = login_window
+        login_window.show()
+        self.close()
 
     def show_about(self):
         from PyQt6.QtWidgets import QMessageBox
@@ -115,15 +129,29 @@ class MainWindow(QMainWindow):
                               "- Contact support for assistance.")
 
     def closeEvent(self, event):
-        from PyQt6.QtWidgets import QMessageBox
-        reply = QMessageBox.question(self, 'Exit Application', 'Are you sure you want to exit?', 
-                                   QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        if reply == QMessageBox.StandardButton.Yes:
-            event.accept()
-        else:
+        from PyQt6.QtWidgets import QApplication, QMessageBox
+        exit_confirmed = None
+        if not self._logging_out:
+            reply = QMessageBox.question(self, 'Exit Application', 'Are you sure you want to exit?', 
+                                       QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            exit_confirmed = reply == QMessageBox.StandardButton.Yes
+        action = resolve_main_window_close(
+            logging_out=self._logging_out,
+            exit_confirmed=exit_confirmed,
+        )
+        if action == "ignore":
             event.ignore()
+            return
+        self.logout_timer.stop()
+        event.accept()
+        if action == "accept_quit":
+            app = QApplication.instance()
+            if app is not None:
+                app.quit()
 
     def check_inactivity(self):
+        if self._logging_out:
+            return
         if (datetime.now() - self.last_activity).total_seconds() > 300:
             self.logout()
 
