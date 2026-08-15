@@ -1,6 +1,7 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QLineEdit, QPushButton, QMessageBox, QLabel
 from PyQt6.QtCore import Qt
 from ...core.auth import validate_login  # This function needs to be added to auth.py
+from ...core.session_lifecycle import release_login_window
 import logging
 
 logging.basicConfig(filename='app/logs/login.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -94,7 +95,11 @@ class LoginWindow(QWidget):
                 from .main import MainWindow
                 self.main_window = MainWindow(self.current_user)
                 self.main_window.show()
-                self.hide()
+                # Close rather than hide: a hidden login window keeps the Qt
+                # process alive after MainWindow exit, so staff can launch a
+                # second instance against the same ledger.
+                release_login_window(self)
+                self.close()
                 logging.info(f"Successful login for user: {user['username']}")
             else:
                 QMessageBox.warning(self, "Login Failed", "Invalid username or password")
